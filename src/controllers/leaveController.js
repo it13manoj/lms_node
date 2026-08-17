@@ -1,5 +1,6 @@
 const Leave = require('../models/Leave');
 const Employee = require('../models/Employee');
+const User = require('../models/User');
 const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 
@@ -386,12 +387,13 @@ const updateLeaveStatus = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
-module.exports = { 
-  requestLeave, 
-  getLeaveBalance, 
-  getLeaveHistory, 
+module.exports = {
+  requestLeave,
+  getLeaveBalance,
+  getLeaveHistory,
   cancelLeave,
-  getLeaves, // Add this export
+  getLeaves,
+  getLeaveCalendar,
   updateLeaveStatus
 };
 
