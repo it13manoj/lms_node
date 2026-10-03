@@ -5,7 +5,9 @@
   "main": "src/lms.js",
   "scripts": {
     "start": "node src/lms.js",
-    "dev": "nodemon src/lms.js"
+    "dev": "nodemon src/lms.js",
+    "migrate": "node src/scripts/migrate.js",
+    "db:dump": "node src/scripts/exportDump.js"
   },
   "dependencies": {
     "express": "^4.18.2",

@@ -1,13 +1,11 @@
--- MySQL dump 10.13  Distrib 8.0.45, for Win64 (x86_64)
---
--- Host: localhost    Database: lms_panel
--- ------------------------------------------------------
--- Server version	8.0.45
+-- MySQL dump for table `employees`
+-- Database: lms_panel
+-- Generated on 2026-10-03 09:49:31
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!50503 SET NAMES utf8 */;
+/*!50503 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -45,23 +43,10 @@ CREATE TABLE `employees` (
   UNIQUE KEY `user_id` (`user_id`),
   UNIQUE KEY `employee_id` (`employee_id`),
   UNIQUE KEY `email` (`email`),
-  UNIQUE KEY `employee_id_2` (`employee_id`),
-  UNIQUE KEY `email_2` (`email`),
-  UNIQUE KEY `employee_id_3` (`employee_id`),
-  UNIQUE KEY `email_3` (`email`),
-  UNIQUE KEY `employee_id_4` (`employee_id`),
-  UNIQUE KEY `email_4` (`email`),
-  UNIQUE KEY `employee_id_5` (`employee_id`),
-  UNIQUE KEY `email_5` (`email`),
-  UNIQUE KEY `employee_id_6` (`employee_id`),
-  UNIQUE KEY `email_6` (`email`),
-  KEY `idx_employees_employee_id` (`employee_id`),
-  KEY `idx_employees_email` (`email`),
   KEY `idx_employees_department` (`department`),
   KEY `idx_employees_deleted_at` (`deleted_at`),
-  KEY `idx_employees_user_id` (`user_id`),
   CONSTRAINT `employees_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -70,11 +55,15 @@ CREATE TABLE `employees` (
 
 LOCK TABLES `employees` WRITE;
 /*!40000 ALTER TABLE `employees` DISABLE KEYS */;
-INSERT INTO `employees` VALUES (1,1,'PT202601011','John','Doe','admin@lms.com','1234567890','Administration','System Admin','2023-01-01 00:00:00',75000.00,NULL,NULL,NULL,NULL,NULL,'2026-08-08 18:30:49','2026-08-08 18:30:49'),(2,2,'PT202608082','Manoj','Sharma','it13manoj@gmail.com','9340334221','IT','Sales Manager','2026-08-08 00:00:00',100000.00,NULL,NULL,NULL,NULL,NULL,'2026-08-08 13:13:22','2026-08-08 13:13:22');
+INSERT INTO `employees` VALUES (1,1,'PT202601011','John','Doe','admin@lms.com','1234567890','Administration','System Admin','2023-01-01 00:00:00','75000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-08 18:30:49','2026-08-08 18:30:49'),
+(2,2,'PT202608082','Manoj','Sharma','it13manoj@gmail.com','9340334221','IT','Sales Manager','2026-08-08 00:00:00','100000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-08 13:13:22','2026-08-08 13:13:22'),
+(3,3,'PT202608153','Komal','Kushwaha','kushwahakomal382@gmail.com','95898 69227','IT','Web Developer','2026-08-01 00:00:00','4000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-15 06:20:42','2026-08-15 06:20:42'),
+(4,4,'PT2025080101','Alok','Kumar','alok.kumar767@company.com',NULL,'General','Staff','2026-10-03 07:05:04',NULL,NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04'),
+(5,5,'PT2026010103','Vikki','Kumar','vikki.kumar598@company.com',NULL,'General','Staff','2026-10-03 07:05:04',NULL,NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04');
 /*!40000 ALTER TABLE `employees` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
@@ -82,5 +71,3 @@ UNLOCK TABLES;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
--- Dump completed on 2026-08-08 18:49:30

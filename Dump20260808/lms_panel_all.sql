@@ -1,6 +1,6 @@
--- MySQL dump for table `attendance`
--- Database: lms_panel
+-- LMS Panel Complete Database Dump
 -- Generated on 2026-10-03 09:49:31
+-- Host: localhost    Database: lms_panel
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -12,6 +12,93 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` enum('admin','hr','manager','sales','team','employee') DEFAULT 'employee',
+  `status` enum('active','inactive') DEFAULT 'active',
+  `deleted_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_users_deleted_at` (`deleted_at`),
+  KEY `idx_users_role` (`role`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,'admin@lms.com','$2a$10$JqkqNwZesnpX.4hlaQsYfeOYn7bYRGvXXQuDkO5kD9rOgzllF5qFq','admin','active',NULL,'2026-08-08 18:30:24','2026-08-08 13:02:53'),
+(2,'it13manoj@gmail.com','$2a$10$7tBuGorB8sly4lI8bp2q9OuBcIoix1ZNFH10z8al/XaqEgVswZ6aS','employee','active',NULL,'2026-08-08 13:13:22','2026-08-08 13:13:22'),
+(3,'kushwahakomal382@gmail.com','$2a$10$KbLtbg6cihoEXX3wiHuxs.AcYPfSFnwvvtJEVsumGrC0n2NsGpyl2','employee','active',NULL,'2026-08-15 06:20:42','2026-08-15 06:20:42'),
+(4,'alok.kumar767@company.com','$10$JqkqNwZesnpX.4hlaQsYfeOYn7bYRGvXXQuDkO5kD9rOgzllF5qFq','employee','active',NULL,'2026-10-03 07:05:03','2026-10-03 07:05:03'),
+(5,'vikki.kumar598@company.com','$2a$10$QULvNyrD4Jgxz4aqxwnLIedRP4VCLDl1yzYEi/XkMz2xzl./p9dHK','employee','active',NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `employees`
+--
+
+DROP TABLE IF EXISTS `employees`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `employees` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `employee_id` varchar(50) NOT NULL,
+  `first_name` varchar(50) NOT NULL,
+  `last_name` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `department` varchar(50) DEFAULT NULL,
+  `position` varchar(50) DEFAULT NULL,
+  `joining_date` datetime DEFAULT NULL,
+  `salary` decimal(10,2) DEFAULT NULL,
+  `profile_picture` varchar(255) DEFAULT NULL,
+  `address` text,
+  `emergency_contact` varchar(50) DEFAULT NULL,
+  `bank_account` varchar(50) DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  UNIQUE KEY `employee_id` (`employee_id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_employees_department` (`department`),
+  KEY `idx_employees_deleted_at` (`deleted_at`),
+  CONSTRAINT `employees_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `employees`
+--
+
+LOCK TABLES `employees` WRITE;
+/*!40000 ALTER TABLE `employees` DISABLE KEYS */;
+INSERT INTO `employees` VALUES (1,1,'PT202601011','John','Doe','admin@lms.com','1234567890','Administration','System Admin','2023-01-01 00:00:00','75000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-08 18:30:49','2026-08-08 18:30:49'),
+(2,2,'PT202608082','Manoj','Sharma','it13manoj@gmail.com','9340334221','IT','Sales Manager','2026-08-08 00:00:00','100000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-08 13:13:22','2026-08-08 13:13:22'),
+(3,3,'PT202608153','Komal','Kushwaha','kushwahakomal382@gmail.com','95898 69227','IT','Web Developer','2026-08-01 00:00:00','4000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-15 06:20:42','2026-08-15 06:20:42'),
+(4,4,'PT2025080101','Alok','Kumar','alok.kumar767@company.com',NULL,'General','Staff','2026-10-03 07:05:04',NULL,NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04'),
+(5,5,'PT2026010103','Vikki','Kumar','vikki.kumar598@company.com',NULL,'General','Staff','2026-10-03 07:05:04',NULL,NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04');
+/*!40000 ALTER TABLE `employees` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `attendance`
@@ -161,6 +248,228 @@ INSERT INTO `attendance` VALUES (6,2,'PT202608082','Manoj Sharma','2026-08-08','
 (116,2,'PT202608082','Manoj Sharma','2026-08-22','11:16:37',NULL,'present',106,0,'Late by 1h 46m (In: 11:16 AM) | No check-out recorded','0.00',NULL,'["11:16:37"]','2026-10-03 07:26:07');
 /*!40000 ALTER TABLE `attendance` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `holidays`
+--
+
+DROP TABLE IF EXISTS `holidays`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `holidays` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `holiday_name` varchar(255) NOT NULL,
+  `holiday_date` date NOT NULL,
+  `description` text,
+  `holiday_type` enum('public','national','company') DEFAULT 'public',
+  `year` int NOT NULL,
+  `status` varchar(255) DEFAULT 'active',
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `holidays`
+--
+
+LOCK TABLES `holidays` WRITE;
+/*!40000 ALTER TABLE `holidays` DISABLE KEYS */;
+INSERT INTO `holidays` VALUES (1,'Happy Independence Day','2026-08-15','Wishing you and your team a very Happy 80th Independence Day.\nMay our nation continue to grow with unity, peace, and prosperity.\n\nJai Hind! ??','public',2026,'active','2026-08-15 04:47:10'),
+(2,'Raksha Bandhan','2026-08-28','The office will remain closed on 28 August on the occasion of Raksha Bandhan.','public',2026,'active','2026-08-15 04:48:07'),
+(3,'Gandhi Jayanti','2026-10-02','Gandhi Jayanti','public',2026,'active','2026-08-15 04:49:56'),
+(4,'Dussehra','2026-10-20','Dussehra','public',2026,'active','2026-08-15 04:50:25'),
+(5,'Dussehra','2026-10-19','Dussehra','public',2026,'active','2026-08-15 04:50:49'),
+(6,'Diwali','2026-11-08','Diwali','public',2026,'active','2026-08-15 04:51:27'),
+(7,'Govardhan Puja','2026-11-09','Govardhan Puja','public',2026,'active','2026-08-15 04:51:51'),
+(8,'Christmas','2026-12-25','Christmas','public',2026,'active','2026-08-15 04:52:16');
+/*!40000 ALTER TABLE `holidays` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `leaves`
+--
+
+DROP TABLE IF EXISTS `leaves`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `leaves` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `employee_id` int DEFAULT NULL,
+  `leave_type` enum('annual','sick','casual','maternity','paternity','other') NOT NULL,
+  `start_date` datetime NOT NULL,
+  `end_date` datetime NOT NULL,
+  `total_days` int NOT NULL,
+  `reason` text,
+  `status` enum('pending','approved','rejected','cancelled') DEFAULT 'pending',
+  `approved_by` int DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `cancellation_reason` text,
+  `cancelled_by` int DEFAULT NULL,
+  `cancelled_at` datetime DEFAULT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `employee_id` (`employee_id`),
+  KEY `approved_by` (`approved_by`),
+  KEY `cancelled_by` (`cancelled_by`),
+  CONSTRAINT `leaves_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `leaves_ibfk_2` FOREIGN KEY (`approved_by`) REFERENCES `employees` (`id`),
+  CONSTRAINT `leaves_ibfk_3` FOREIGN KEY (`cancelled_by`) REFERENCES `employees` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `leaves`
+--
+
+LOCK TABLES `leaves` WRITE;
+/*!40000 ALTER TABLE `leaves` DISABLE KEYS */;
+INSERT INTO `leaves` VALUES (1,2,'casual','2026-08-18 00:00:00','2026-08-18 00:00:00',1,'Going to the out of station','pending',NULL,'2026-08-15 05:44:06',NULL,NULL,NULL,NULL,'2026-08-15 05:44:06');
+/*!40000 ALTER TABLE `leaves` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `payments`
+--
+
+DROP TABLE IF EXISTS `payments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payments` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `employee_id` int DEFAULT NULL,
+  `payment_type` enum('salary','bonus','reimbursement','advance') NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `payment_date` date DEFAULT NULL,
+  `status` enum('pending','completed','failed') DEFAULT 'pending',
+  `description` text,
+  `reference_number` varchar(100) DEFAULT NULL,
+  `created_by` int DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `employee_id` (`employee_id`),
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`),
+  CONSTRAINT `payments_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `payments`
+--
+
+LOCK TABLES `payments` WRITE;
+/*!40000 ALTER TABLE `payments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `payments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `performance`
+--
+
+DROP TABLE IF EXISTS `performance`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `performance` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `employee_id` int DEFAULT NULL,
+  `review_date` date DEFAULT NULL,
+  `rating` int DEFAULT NULL,
+  `comments` text,
+  `review_by` int DEFAULT NULL,
+  `goals` text,
+  `achievements` text,
+  `status` enum('draft','submitted','reviewed') DEFAULT 'draft',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `employee_id` (`employee_id`),
+  KEY `review_by` (`review_by`),
+  CONSTRAINT `performance_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`),
+  CONSTRAINT `performance_ibfk_2` FOREIGN KEY (`review_by`) REFERENCES `employees` (`id`),
+  CONSTRAINT `performance_chk_1` CHECK (((`rating` >= 1) and (`rating` <= 5)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `performance`
+--
+
+LOCK TABLES `performance` WRITE;
+/*!40000 ALTER TABLE `performance` DISABLE KEYS */;
+/*!40000 ALTER TABLE `performance` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `policies`
+--
+
+DROP TABLE IF EXISTS `policies`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `policies` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) NOT NULL,
+  `description` text,
+  `policy_type` enum('hr','company','employee','manager','sales','team') NOT NULL,
+  `category` varchar(100) DEFAULT NULL,
+  `file_url` varchar(255) DEFAULT NULL,
+  `version` varchar(20) DEFAULT NULL,
+  `effective_date` date DEFAULT NULL,
+  `created_by` int DEFAULT NULL,
+  `status` enum('active','inactive') DEFAULT 'active',
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `created_by` (`created_by`),
+  CONSTRAINT `policies_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `policies`
+--
+
+LOCK TABLES `policies` WRITE;
+/*!40000 ALTER TABLE `policies` DISABLE KEYS */;
+INSERT INTO `policies` VALUES (1,'General Conduct','Employees must maintain professionalism and integrity at all times. Respect colleagues, clients, and\ncompany property. Harassment, discrimination, or misconduct will not be tolerated.\n','hr','General',NULL,'1.0','2026-02-01',1,'active','2026-08-15 06:00:15');
+/*!40000 ALTER TABLE `policies` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `salary`
+--
+
+DROP TABLE IF EXISTS `salary`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `salary` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `employee_id` int DEFAULT NULL,
+  `month_year` date NOT NULL,
+  `basic_salary` decimal(10,2) DEFAULT NULL,
+  `allowances` decimal(10,2) DEFAULT NULL,
+  `deductions` decimal(10,2) DEFAULT NULL,
+  `bonus` decimal(10,2) DEFAULT NULL,
+  `total_salary` decimal(10,2) DEFAULT NULL,
+  `net_salary` decimal(10,2) DEFAULT NULL,
+  `payment_date` date DEFAULT NULL,
+  `status` enum('pending','paid','cancelled') DEFAULT 'pending',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `employee_id` (`employee_id`),
+  CONSTRAINT `salary_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `salary`
+--
+
+LOCK TABLES `salary` WRITE;
+/*!40000 ALTER TABLE `salary` DISABLE KEYS */;
+/*!40000 ALTER TABLE `salary` ENABLE KEYS */;
+UNLOCK TABLES;
+
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
