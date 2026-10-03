@@ -390,7 +390,16 @@ const getDailyAttendance = async (req, res) => {
             date = normalizeDate(date) || date;
         }
 
-        // 1. Fetch all active employees
+        // Check user role: Admin, HR and Manager see all staff; Employees only see their own attendance
+        const isManagerial = ['admin', 'hr', 'manager'].includes(req.user?.role);
+        let currentEmployee = null;
+        if (!isManagerial && req.user) {
+            currentEmployee = await Employee.findOne({
+                where: { user_id: req.user.id }
+            });
+        }
+
+        // 1. Fetch active employees
         const allEmployees = await Employee.findAll({
             include: [{
                 model: User,
@@ -400,6 +409,11 @@ const getDailyAttendance = async (req, res) => {
             }],
             order: [['first_name', 'ASC']]
         });
+
+        // Filter employees list for non-managerial staff
+        const employeesToProcess = isManagerial 
+            ? allEmployees 
+            : allEmployees.filter(e => currentEmployee && (e.id === currentEmployee.id || e.user_id === req.user.id));
 
         // 2. Fetch all attendance records for this date
         const dayAttendance = await Attendance.findAll({
@@ -420,8 +434,8 @@ const getDailyAttendance = async (req, res) => {
         const matchedAttIds = new Set();
         const fullDayList = [];
 
-        // 3. Process every registered employee
-        for (const emp of allEmployees) {
+        // 3. Process registered employees
+        for (const emp of employeesToProcess) {
             const fullName = `${emp.first_name || ''} ${emp.last_name || ''}`.trim();
             const cleanJob = cleanCell(emp.employee_id).toLowerCase();
             const cleanName = fullName.toLowerCase();
@@ -511,41 +525,43 @@ const getDailyAttendance = async (req, res) => {
             }
         }
 
-        // 4. Include any attendance records for this date not mapped to an existing employee
-        dayAttendance.forEach(att => {
-            if (!matchedAttIds.has(att.id)) {
-                const isLate = (att.late_minutes || 0) > 0;
-                const isEarlyLeave = (att.early_leave_minutes || 0) > 0;
-                fullDayList.push({
-                    id: att.id,
-                    employee_id: att.employee_id,
-                    job_no: att.job_no || '--',
-                    name: att.employee_name || 'Guest/Unmapped Employee',
-                    email: '--',
-                    department: 'Operations',
-                    position: 'Staff',
-                    date: date,
-                    status: 'present',
-                    is_present: true,
-                    is_absent: false,
-                    is_late: isLate,
-                    late_minutes: att.late_minutes || 0,
-                    late_comment: isLate ? `Late by ${formatMinutes(att.late_minutes)}` : 'On Time',
-                    is_early_leave: isEarlyLeave,
-                    early_leave_minutes: att.early_leave_minutes || 0,
-                    early_leave_comment: isEarlyLeave ? `Left early by ${formatMinutes(att.early_leave_minutes)}` : 'Completed',
-                    check_in: att.check_in,
-                    check_in_formatted: formatTime12(att.check_in),
-                    check_out: att.check_out,
-                    check_out_formatted: formatTime12(att.check_out),
-                    working_hours: parseFloat(att.working_hours || 0),
-                    working_hours_formatted: `${Math.floor(att.working_hours || 0)}h ${Math.round(((att.working_hours || 0) % 1) * 60)}m`,
-                    remarks: att.remarks,
-                    raw_punches: att.raw_punches ? JSON.parse(att.raw_punches) : [],
-                    is_on_time: !isLate && !isEarlyLeave && !!att.check_out
-                });
-            }
-        });
+        // 4. Include any attendance records for this date not mapped to an existing employee (Managers/Admins only)
+        if (isManagerial) {
+            dayAttendance.forEach(att => {
+                if (!matchedAttIds.has(att.id)) {
+                    const isLate = (att.late_minutes || 0) > 0;
+                    const isEarlyLeave = (att.early_leave_minutes || 0) > 0;
+                    fullDayList.push({
+                        id: att.id,
+                        employee_id: att.employee_id,
+                        job_no: att.job_no || '--',
+                        name: att.employee_name || 'Guest/Unmapped Employee',
+                        email: '--',
+                        department: 'Operations',
+                        position: 'Staff',
+                        date: date,
+                        status: 'present',
+                        is_present: true,
+                        is_absent: false,
+                        is_late: isLate,
+                        late_minutes: att.late_minutes || 0,
+                        late_comment: isLate ? `Late by ${formatMinutes(att.late_minutes)}` : 'On Time',
+                        is_early_leave: isEarlyLeave,
+                        early_leave_minutes: att.early_leave_minutes || 0,
+                        early_leave_comment: isEarlyLeave ? `Left early by ${formatMinutes(att.early_leave_minutes)}` : 'Completed',
+                        check_in: att.check_in,
+                        check_in_formatted: formatTime12(att.check_in),
+                        check_out: att.check_out,
+                        check_out_formatted: formatTime12(att.check_out),
+                        working_hours: parseFloat(att.working_hours || 0),
+                        working_hours_formatted: `${Math.floor(att.working_hours || 0)}h ${Math.round(((att.working_hours || 0) % 1) * 60)}m`,
+                        remarks: att.remarks,
+                        raw_punches: att.raw_punches ? JSON.parse(att.raw_punches) : [],
+                        is_on_time: !isLate && !isEarlyLeave && !!att.check_out
+                    });
+                }
+            });
+        }
 
         // 5. Compute Summary Metrics
         const totalEmployees = fullDayList.length;
@@ -845,9 +861,21 @@ const getAttendanceStats = async (req, res) => {
 // @access  Private
 const getEmployeeMonthlyAttendance = async (req, res) => {
     try {
-        const { employeeId, year, month, status, dateSearch } = req.query;
+        let { employeeId, year, month, status, dateSearch } = req.query;
 
-        if (!employeeId) {
+        // Non-managerial staff can ONLY access their own monthly records
+        const isManagerial = ['admin', 'hr', 'manager'].includes(req.user?.role);
+        let targetEmployeeId = employeeId;
+
+        if (!isManagerial && req.user) {
+            const currentEmp = await Employee.findOne({
+                where: { user_id: req.user.id }
+            });
+            if (!currentEmp) {
+                return res.status(404).json({ success: false, message: 'Employee profile not found' });
+            }
+            targetEmployeeId = currentEmp.id;
+        } else if (!targetEmployeeId) {
             return res.status(400).json({ success: false, message: 'employeeId parameter is required' });
         }
 
@@ -855,9 +883,9 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
         let employee = await Employee.findOne({
             where: {
                 [Op.or]: [
-                    { id: employeeId },
-                    { employee_id: employeeId },
-                    { user_id: employeeId }
+                    { id: targetEmployeeId },
+                    { employee_id: targetEmployeeId },
+                    { user_id: targetEmployeeId }
                 ]
             },
             include: [{ model: User, attributes: ['id', 'email', 'role'] }]
@@ -865,7 +893,7 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
 
         // Fallback: If employee not found in employees table, check attendance table
         let displayName = employee ? `${employee.first_name} ${employee.last_name}` : null;
-        let displayJobNo = employee ? employee.employee_id : employeeId;
+        let displayJobNo = employee ? employee.employee_id : targetEmployeeId;
 
         if (!employee) {
             const attSample = await Attendance.findOne({
