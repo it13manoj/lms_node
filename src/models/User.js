@@ -41,11 +41,6 @@ const User = sequelize.define('User', {
     paranoid: true,
     indexes: [
         {
-            name: 'idx_users_email',
-            fields: ['email'],
-            unique: true
-        },
-        {
             name: 'idx_users_deleted_at',
             fields: ['deleted_at']
         },

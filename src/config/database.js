@@ -29,13 +29,7 @@ const connectDB = async () => {
         await sequelize.authenticate();
         console.log('✅ MySQL Connected Successfully');
         
-        // Use alter: true but with caution
-        // This will add/remove columns but won't create duplicate indexes
-        await sequelize.sync({ 
-            alter: true,
-            // Don't create indexes automatically
-            indexes: false 
-        });
+        await sequelize.sync();
         console.log('✅ Database synced');
     } catch (error) {
         console.error('❌ Unable to connect to database:', error);

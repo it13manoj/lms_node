@@ -80,17 +80,6 @@ const Employee = sequelize.define('Employee', {
     paranoid: true,
     // Prevent automatic index creation
     indexes: [
-        // Only explicitly define necessary indexes
-        {
-            name: 'idx_employees_employee_id',
-            fields: ['employee_id'],
-            unique: true
-        },
-        {
-            name: 'idx_employees_email',
-            fields: ['email'],
-            unique: true
-        },
         {
             name: 'idx_employees_department',
             fields: ['department']
@@ -98,10 +87,6 @@ const Employee = sequelize.define('Employee', {
         {
             name: 'idx_employees_deleted_at',
             fields: ['deleted_at']
-        },
-        {
-            name: 'idx_employees_user_id',
-            fields: ['user_id']
         }
     ],
     hooks: {
