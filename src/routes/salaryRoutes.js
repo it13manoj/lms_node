@@ -4,6 +4,7 @@ const {
   getSalarySlip,
   generateSalary,
   paySalary,
+  approveSalary,
   getSalaryHistory,
   getSalaries
 } = require('../controllers/salaryController');
@@ -16,8 +17,11 @@ router.get('/slip', protect, getSalarySlip);
 // Fallback: alias / for slip or list based on query
 router.get('/details', protect, getSalarySlip);
 
-// Generate / save salary slip in database
+// Generate / save / finalize salary slip in database
 router.post('/generate', protect, authorize('admin', 'hr'), generateSalary);
+
+// Approve salary slip (Admin / HR)
+router.post('/approve/:id', protect, authorize('admin', 'hr'), approveSalary);
 
 // Mark salary as paid
 router.post('/pay/:id', protect, authorize('admin', 'hr'), paySalary);

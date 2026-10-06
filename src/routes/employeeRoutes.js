@@ -10,7 +10,9 @@ const {
     permanentDeleteEmployee,
     getEmployeeStats,
     getDeletedEmployees,
-    getEmployeesDropdown
+    getEmployeesDropdown,
+    getEmployeeLeaves,
+    getEmployeeAttendance
 } = require('../controllers/employeeController');
 const { 
     protect, 
@@ -36,6 +38,12 @@ router.get('/stats', protect, authorize('admin', 'hr'), getEmployeeStats);
 
 // Get single employee - All authenticated users (with restrictions)
 router.get('/:id', protect, canAccessEmployeeData, getEmployee);
+
+// Get employee leave history - All authenticated users (with restrictions)
+router.get('/:id/leaves', protect, canAccessEmployeeData, getEmployeeLeaves);
+
+// Get employee attendance history - All authenticated users (with restrictions)
+router.get('/:id/attendance', protect, canAccessEmployeeData, getEmployeeAttendance);
 
 // Update employee - Admin, HR only
 router.put('/:id', protect, authorize('admin', 'hr'), [

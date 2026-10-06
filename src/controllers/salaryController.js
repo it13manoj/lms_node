@@ -176,13 +176,32 @@ const calculateEmployeeMonthlySalary = async (employee, year, month) => {
   const workingDaysInMonth = totalDaysInMonth - weekendDays - holidayDays;
 
   // 4. Paid Leave Policy (1 Paid Leave Only provided)
+  // Rule:
+  // - All Sundays (Weekly Off) are fully paid days ("Sunday have make salary")
+  // - All Official Holidays are fully paid days
+  // - 1 Absent day is covered by company paid leave with ZERO deduction
+  // - Only working absent days exceeding 1 paid leave are deducted as Loss of Pay (LOP)
   const paidLeavesAllowed = 1;
   const paidLeavesUsed = absentDays > 0 ? Math.min(paidLeavesAllowed, absentDays) : 0;
   const unpaidAbsentDays = Math.max(0, absentDays - paidLeavesUsed);
 
+  // Total Paid Days in month = Present Days + Sundays + Holidays + 1 Paid Leave
+  const totalPaidDays = presentDays + weekendDays + holidayDays + paidLeavesUsed;
+
   // 5. Per Day Salary & Absent Deduction calculation
   const perDaySalary = totalDaysInMonth > 0 ? Number((baseSalary / totalDaysInMonth).toFixed(2)) : 0;
-  const absentDeduction = Number((unpaidAbsentDays * perDaySalary).toFixed(2));
+  
+  // Exact day-wise deduction for unexcused working absent days beyond 1 paid leave
+  const absentDeduction = totalDaysInMonth > 0 
+    ? Number(((unpaidAbsentDays * baseSalary) / totalDaysInMonth).toFixed(2))
+    : 0;
+
+  const sundaySalary = totalDaysInMonth > 0
+    ? Number(((weekendDays * baseSalary) / totalDaysInMonth).toFixed(2))
+    : 0;
+  const paidLeaveSalary = totalDaysInMonth > 0
+    ? Number(((paidLeavesUsed * baseSalary) / totalDaysInMonth).toFixed(2))
+    : 0;
 
   // 6. Earnings Breakdown (Standard Payroll Structure)
   const basicSalary = Number((baseSalary * 0.50).toFixed(2));
@@ -191,7 +210,7 @@ const calculateEmployeeMonthlySalary = async (employee, year, month) => {
   const specialAllowance = Number((baseSalary - basicSalary - hra - conveyance).toFixed(2));
   const totalEarnings = baseSalary;
 
-  // Net payable calculation
+  // Net payable calculation (Base salary minus unpaid absent deduction)
   const netSalary = Math.max(0, Number((totalEarnings - absentDeduction).toFixed(2)));
 
   return {
@@ -204,6 +223,7 @@ const calculateEmployeeMonthlySalary = async (employee, year, month) => {
       totalDays: totalDaysInMonth,
       workingDays: workingDaysInMonth,
       weekendDays,
+      sundayDays: weekendDays,
       holidayDays,
       presentDays,
       absentDays,
@@ -212,12 +232,16 @@ const calculateEmployeeMonthlySalary = async (employee, year, month) => {
       paidLeavesAllowed,
       paidLeavesUsed,
       unpaidAbsentDays,
+      totalPaidDays,
       totalWorkingHours: Number(totalWorkingHours.toFixed(2))
     },
     salary: {
       baseSalary,
       perDaySalary,
       absentDeduction,
+      sundaySalary,
+      paidLeaveSalary,
+      totalPaidDays,
       earnings: {
         basicSalary,
         hra,
@@ -267,8 +291,13 @@ const getSalarySlip = async (req, res) => {
           }
         });
       } else {
-        // Default to first employee if no employee specified
-        targetEmployee = await Employee.findOne({ order: [['id', 'ASC']] });
+        // If manager has an employee profile, default to own profile, otherwise first active employee
+        if (req.user) {
+          targetEmployee = await Employee.findOne({ where: { user_id: req.user.id } });
+        }
+        if (!targetEmployee) {
+          targetEmployee = await Employee.findOne({ order: [['id', 'ASC']] });
+        }
       }
 
       if (!targetEmployee) {
@@ -282,10 +311,28 @@ const getSalarySlip = async (req, res) => {
       const parts = monthYear.split('-');
       targetYear = parseInt(parts[0], 10);
       targetMonth = parseInt(parts[1], 10);
+    } else if (year && month) {
+      targetYear = parseInt(year, 10);
+      targetMonth = parseInt(month, 10);
     } else {
-      const now = new Date();
-      targetYear = year ? parseInt(year, 10) : now.getFullYear();
-      targetMonth = month ? parseInt(month, 10) : (now.getMonth() + 1);
+      // Find latest month with attendance records for this employee or latest overall
+      const latestAtt = await Attendance.findOne({
+        where: {
+          [Op.or]: [
+            { employee_id: targetEmployee.id },
+            { job_no: targetEmployee.employee_id }
+          ]
+        },
+        order: [['date', 'DESC']]
+      });
+      if (latestAtt && latestAtt.date) {
+        targetYear = year ? parseInt(year, 10) : parseInt(latestAtt.date.substring(0, 4), 10);
+        targetMonth = month ? parseInt(month, 10) : parseInt(latestAtt.date.substring(5, 7), 10);
+      } else {
+        const now = new Date();
+        targetYear = year ? parseInt(year, 10) : now.getFullYear();
+        targetMonth = month ? parseInt(month, 10) : (now.getMonth() + 1);
+      }
     }
 
     // Calculate dynamic salary and attendance deduction
@@ -497,6 +544,33 @@ const paySalary = async (req, res) => {
   }
 };
 
+// @desc    Approve salary slip (unlocks employee download)
+// @route   POST /api/salary/approve/:id
+// @access  Private (Admin / HR)
+const approveSalary = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const salary = await Salary.findByPk(id);
+    if (!salary) {
+      return res.status(404).json({ success: false, message: 'Salary record not found' });
+    }
+
+    await salary.update({
+      status: 'approved'
+    });
+
+    res.json({
+      success: true,
+      message: 'Salary slip approved successfully by Admin',
+      data: salary
+    });
+  } catch (error) {
+    console.error('Error approving salary:', error);
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+  }
+};
+
 // @desc    Get salary history
 // @route   GET /api/salary/history
 // @access  Private
@@ -586,6 +660,7 @@ module.exports = {
   getSalarySlip,
   generateSalary,
   paySalary,
+  approveSalary,
   getSalaryHistory,
   getSalaries,
   calculateEmployeeMonthlySalary

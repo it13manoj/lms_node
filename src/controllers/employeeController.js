@@ -464,6 +464,72 @@ const getEmployeesDropdown = async (req, res) => {
     }
 };
 
+// @desc    Get leave history for a specific employee
+// @route   GET /api/employees/:id/leaves
+// @access  Private
+const getEmployeeLeaves = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const Leave = require('../models/Leave');
+        const leaves = await Leave.findAll({
+            where: { employee_id: id },
+            order: [['created_at', 'DESC']]
+        });
+
+        res.json({
+            success: true,
+            data: leaves
+        });
+    } catch (error) {
+        console.error('Get employee leaves error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error', 
+            error: error.message 
+        });
+    }
+};
+
+// @desc    Get attendance history for a specific employee
+// @route   GET /api/employees/:id/attendance
+// @access  Private
+const getEmployeeAttendance = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const Attendance = require('../models/Attendance');
+        const employee = await Employee.findByPk(id);
+
+        const where = {};
+        if (employee) {
+            where[Op.or] = [
+                { employee_id: employee.id },
+                { job_no: employee.employee_id },
+                { employee_name: `${employee.first_name || ''} ${employee.last_name || ''}`.trim() }
+            ];
+        } else {
+            where.employee_id = id;
+        }
+
+        const attendance = await Attendance.findAll({
+            where,
+            order: [['date', 'DESC']],
+            limit: 60
+        });
+
+        res.json({
+            success: true,
+            data: attendance
+        });
+    } catch (error) {
+        console.error('Get employee attendance error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error', 
+            error: error.message 
+        });
+    }
+};
+
 module.exports = { 
     getEmployees, 
     getEmployee, 
@@ -473,5 +539,7 @@ module.exports = {
     permanentDeleteEmployee,
     getEmployeeStats,
     getDeletedEmployees,
-    getEmployeesDropdown 
+    getEmployeesDropdown,
+    getEmployeeLeaves,
+    getEmployeeAttendance
 };

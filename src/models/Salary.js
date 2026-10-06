@@ -87,7 +87,7 @@ const Salary = sequelize.define('Salary', {
     allowNull: true
   },
   status: {
-    type: DataTypes.ENUM('pending', 'paid', 'cancelled'),
+    type: DataTypes.ENUM('pending', 'approved', 'paid', 'cancelled'),
     defaultValue: 'pending'
   }
 }, {
