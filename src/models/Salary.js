@@ -54,6 +54,38 @@ const Salary = sequelize.define('Salary', {
     type: DataTypes.DATEONLY,
     allowNull: true
   },
+  present_days: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  absent_days: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  paid_leaves: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1
+  },
+  unpaid_leaves: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
+  },
+  per_day_salary: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
+  },
+  absent_deduction: {
+    type: DataTypes.DECIMAL(10, 2),
+    defaultValue: 0
+  },
+  payment_method: {
+    type: DataTypes.STRING(50),
+    defaultValue: 'Bank Transfer'
+  },
+  notes: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
   status: {
     type: DataTypes.ENUM('pending', 'paid', 'cancelled'),
     defaultValue: 'pending'

@@ -13,6 +13,7 @@ const holidayRoutes = require('./routes/holidayRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
 const policyRoutes = require('./routes/policyRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
+const salaryRoutes = require('./routes/salaryRoutes');
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/holidays', holidayRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/policies', policyRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/salary', salaryRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
