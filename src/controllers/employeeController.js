@@ -551,11 +551,11 @@ const getDeletedEmployees = async (req, res) => {
 const getEmployeesDropdown = async (req, res) => {
     try {
         const employees = await Employee.findAll({
-            attributes: ['id', 'first_name', 'last_name', 'employee_id', 'email', 'department'],
+            attributes: ['id', 'first_name', 'last_name', 'employee_id', 'email', 'department', 'position'],
             include: [{
                 model: User,
-                attributes: ['status'],
-                where: { status: 'active' }
+                attributes: ['status', 'role'],
+                required: false
             }],
             order: [['first_name', 'ASC']]
         });
