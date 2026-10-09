@@ -55,6 +55,30 @@ const protect = async (req, res, next) => {
     }
 };
 
+// Optional Auth - attaches user if valid token present, otherwise proceeds as guest
+const optionalAuth = async (req, res, next) => {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+            token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = await User.findByPk(decoded.id, {
+                attributes: { exclude: ['password'] },
+                include: [{
+                    model: Employee,
+                    attributes: ['id', 'first_name', 'last_name', 'employee_id', 'department', 'position']
+                }]
+            });
+            if (req.user && !req.user.deleted_at) {
+                req.userRole = req.user.role;
+            }
+        } catch (error) {
+            // Ignore error for guests
+        }
+    }
+    next();
+};
+
 // Authorize - check if user has required role
 const authorize = (...roles) => {
     return (req, res, next) => {
@@ -189,6 +213,7 @@ const canManagePolicies = (req, res, next) => {
 
 module.exports = {
     protect,
+    optionalAuth,
     authorize,
     isAdminOrHR,
     isAdminOrHRorManager,

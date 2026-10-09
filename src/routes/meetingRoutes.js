@@ -14,7 +14,7 @@ const {
     getMeetingDocuments,
     uploadMeetingDocument
 } = require('../controllers/meetingController');
-const { protect } = require('../middleware/auth');
+const { protect, optionalAuth } = require('../middleware/auth');
 
 // Setup multer storage for meeting document uploads
 const uploadDir = path.join(__dirname, '../../uploads/documents');
@@ -38,20 +38,22 @@ const upload = multer({
     limits: { fileSize: 25 * 1024 * 1024 } // 25MB max
 });
 
-// Meeting CRUD Routes
+// Meeting Management (Employee/Admin authenticated)
 router.get('/', protect, getMeetings);
 router.post('/', protect, createMeeting);
-router.get('/:meetingId', protect, getMeetingById);
 router.put('/:id', protect, updateMeeting);
 router.delete('/:id', protect, deleteMeeting);
 
-// In-Meeting Chat Routes
-router.get('/:meetingId/messages', protect, getMeetingMessages);
-router.post('/:meetingId/messages', protect, postMeetingMessage);
+// Meeting Access (Supports both Authenticated Employees & Public Guests)
+router.get('/:meetingId', optionalAuth, getMeetingById);
 
-// In-Meeting Document Sharing Routes
-router.get('/:meetingId/documents', protect, getMeetingDocuments);
-router.post('/:meetingId/documents', protect, upload.single('file'), uploadMeetingDocument);
+// In-Meeting Chat Routes (Allows Guests with display name)
+router.get('/:meetingId/messages', optionalAuth, getMeetingMessages);
+router.post('/:meetingId/messages', optionalAuth, postMeetingMessage);
+
+// In-Meeting Document Sharing Routes (Allows Guests to view & share)
+router.get('/:meetingId/documents', optionalAuth, getMeetingDocuments);
+router.post('/:meetingId/documents', optionalAuth, upload.single('file'), uploadMeetingDocument);
 
 module.exports = router;
 

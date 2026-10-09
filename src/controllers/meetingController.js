@@ -358,7 +358,7 @@ const uploadMeetingDocument = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Please upload a document file' });
         }
 
-        let uploaderName = 'Participant';
+        let uploaderName = req.body.uploader_name || 'Participant';
         if (req.user) {
             const emp = await Employee.findOne({ where: { user_id: req.user.id } });
             uploaderName = emp ? `${emp.first_name} ${emp.last_name}` : req.user.email;
