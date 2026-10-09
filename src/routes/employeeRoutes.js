@@ -33,8 +33,8 @@ router.get('/deleted', protect, authorize('admin', 'hr'), getDeletedEmployees);
 // Get employees dropdown - All authenticated users
 router.get('/dropdown', protect, getEmployeesDropdown);
 
-// Get employee stats - Admin, HR only
-router.get('/stats', protect, authorize('admin', 'hr'), getEmployeeStats);
+// Get employee stats - All authenticated users (for dashboard)
+router.get('/stats', protect, getEmployeeStats);
 
 // Get single employee - All authenticated users (with restrictions)
 router.get('/:id', protect, canAccessEmployeeData, getEmployee);
