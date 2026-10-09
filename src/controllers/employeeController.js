@@ -2,6 +2,7 @@ const Employee = require('../models/Employee');
 const User = require('../models/User');
 const Attendance = require('../models/Attendance');
 const Leave = require('../models/Leave');
+const Meeting = require('../models/Meeting');
 const { validationResult } = require('express-validator');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
@@ -475,6 +476,50 @@ const getEmployeeStats = async (req, res) => {
             }
         }
 
+        // Upcoming meetings / events
+        let upcomingEvents = [];
+        try {
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const upcomingMeetings = await Meeting.findAll({
+                where: {
+                    status: { [Op.in]: ['scheduled', 'in-progress'] },
+                    scheduled_date: { [Op.gte]: todayStr }
+                },
+                order: [
+                    ['scheduled_date', 'ASC'],
+                    ['start_time', 'ASC']
+                ],
+                limit: 5
+            });
+
+            if (upcomingMeetings && upcomingMeetings.length > 0) {
+                upcomingEvents = upcomingMeetings.map(m => {
+                    const d = new Date(m.scheduled_date);
+                    return {
+                        id: m.id,
+                        meeting_id: m.meeting_id,
+                        title: m.title,
+                        day: String(d.getDate()).padStart(2, '0'),
+                        month: monthNames[d.getMonth()] || 'Mtg',
+                        time: m.start_time?.slice(0, 5) || '10:00',
+                        duration: m.duration_minutes || 45,
+                        type: m.status === 'in-progress' ? 'Live Meeting' : 'Meeting',
+                        status: m.status,
+                        host: m.host_name || 'Admin',
+                        meeting_link: `/meetings/${m.meeting_id}`
+                    };
+                });
+            }
+        } catch (mErr) {
+            console.warn('Error fetching upcoming meetings for dashboard:', mErr);
+        }
+
+        if (upcomingEvents.length === 0) {
+            upcomingEvents = [
+                { id: 1, title: 'No upcoming meetings scheduled', day: String(new Date().getDate()).padStart(2, '0'), month: 'Today', type: 'Notice' }
+            ];
+        }
+
         res.json({
             success: true,
             data: {
@@ -497,10 +542,7 @@ const getEmployeeStats = async (req, res) => {
                     { id: 1, description: 'Attendance logged for today', time: 'Just now' },
                     { id: 2, description: 'Payroll & holiday records updated', time: '1 day ago' }
                 ],
-                upcomingEvents: [
-                    { id: 1, title: 'Team Meeting', day: '15', month: 'Oct', type: 'Meeting' },
-                    { id: 2, title: 'Company Review', day: '24', month: 'Oct', type: 'Review' }
-                ]
+                upcomingEvents
             }
         });
     } catch (error) {
