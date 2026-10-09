@@ -1,6 +1,6 @@
 -- MySQL dump for table `employees`
 -- Database: lms_panel
--- Generated on 2026-10-03 09:49:31
+-- Generated on 2026-10-09 07:41:59
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -58,8 +58,8 @@ LOCK TABLES `employees` WRITE;
 INSERT INTO `employees` VALUES (1,1,'PT202601011','John','Doe','admin@lms.com','1234567890','Administration','System Admin','2023-01-01 00:00:00','75000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-08 18:30:49','2026-08-08 18:30:49'),
 (2,2,'PT202608082','Manoj','Sharma','it13manoj@gmail.com','9340334221','IT','Sales Manager','2026-08-08 00:00:00','100000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-08 13:13:22','2026-08-08 13:13:22'),
 (3,3,'PT202608153','Komal','Kushwaha','kushwahakomal382@gmail.com','95898 69227','IT','Web Developer','2026-08-01 00:00:00','4000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-15 06:20:42','2026-08-15 06:20:42'),
-(4,4,'PT2025080101','Alok','Kumar','alok.kumar767@company.com',NULL,'General','Staff','2026-10-03 07:05:04',NULL,NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04'),
-(5,5,'PT2026010103','Vikki','Kumar','vikki.kumar598@company.com',NULL,'General','Staff','2026-10-03 07:05:04',NULL,NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04');
+(4,4,'PT2025080101','Alok','Kumar','alok.kumar767@company.com',NULL,'General','Staff','2026-10-03 07:05:04','30000.00',NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-06 09:19:46'),
+(5,5,'PT2026010103','Vikki','Kumar','vikki.kumar598@company.com',NULL,'General','Staff','2026-10-03 07:05:04','28000.00',NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-06 09:19:46');
 /*!40000 ALTER TABLE `employees` ENABLE KEYS */;
 UNLOCK TABLES;
 

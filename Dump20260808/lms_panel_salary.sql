@@ -1,6 +1,6 @@
 -- MySQL dump for table `salary`
 -- Database: lms_panel
--- Generated on 2026-10-03 09:49:31
+-- Generated on 2026-10-09 07:41:59
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -31,12 +31,20 @@ CREATE TABLE `salary` (
   `total_salary` decimal(10,2) DEFAULT NULL,
   `net_salary` decimal(10,2) DEFAULT NULL,
   `payment_date` date DEFAULT NULL,
-  `status` enum('pending','paid','cancelled') DEFAULT 'pending',
+  `status` enum('pending','approved','paid','cancelled') DEFAULT 'pending',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `present_days` int DEFAULT '0',
+  `absent_days` int DEFAULT '0',
+  `paid_leaves` int DEFAULT '1',
+  `unpaid_leaves` int DEFAULT '0',
+  `per_day_salary` decimal(10,2) DEFAULT '0.00',
+  `absent_deduction` decimal(10,2) DEFAULT '0.00',
+  `payment_method` varchar(50) DEFAULT 'Bank Transfer',
+  `notes` text,
   PRIMARY KEY (`id`),
   KEY `employee_id` (`employee_id`),
   CONSTRAINT `salary_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -45,6 +53,7 @@ CREATE TABLE `salary` (
 
 LOCK TABLES `salary` WRITE;
 /*!40000 ALTER TABLE `salary` DISABLE KEYS */;
+INSERT INTO `salary` VALUES (1,2,'2026-09-01','50000.00','50000.00','10000.00','0.00','100000.00','90000.00',NULL,'approved','2026-10-06 10:23:23',22,4,1,3,'3333.33','10000.00','Bank Transfer',NULL);
 /*!40000 ALTER TABLE `salary` ENABLE KEYS */;
 UNLOCK TABLES;
 

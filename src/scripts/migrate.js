@@ -9,6 +9,9 @@ const Holiday = require('../models/Holiday');
 const Leave = require('../models/Leave');
 const Policy = require('../models/Policy');
 const Salary = require('../models/Salary');
+const Meeting = require('../models/Meeting');
+const MeetingDocument = require('../models/MeetingDocument');
+const MeetingMessage = require('../models/MeetingMessage');
 
 const models = [
   { name: 'User', model: User, table: 'users' },
@@ -17,7 +20,10 @@ const models = [
   { name: 'Holiday', model: Holiday, table: 'holidays' },
   { name: 'Leave', model: Leave, table: 'leaves' },
   { name: 'Policy', model: Policy, table: 'policies' },
-  { name: 'Salary', model: Salary, table: 'salary' }
+  { name: 'Salary', model: Salary, table: 'salary' },
+  { name: 'Meeting', model: Meeting, table: 'meetings' },
+  { name: 'MeetingDocument', model: MeetingDocument, table: 'meeting_documents' },
+  { name: 'MeetingMessage', model: MeetingMessage, table: 'meeting_messages' }
 ];
 
 function getSqlColumnDefinition(attr) {

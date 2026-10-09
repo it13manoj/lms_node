@@ -1,5 +1,5 @@
 -- LMS Panel Complete Database Dump
--- Generated on 2026-10-03 09:49:31
+-- Generated on 2026-10-09 07:41:59
 -- Host: localhost    Database: lms_panel
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -95,8 +95,8 @@ LOCK TABLES `employees` WRITE;
 INSERT INTO `employees` VALUES (1,1,'PT202601011','John','Doe','admin@lms.com','1234567890','Administration','System Admin','2023-01-01 00:00:00','75000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-08 18:30:49','2026-08-08 18:30:49'),
 (2,2,'PT202608082','Manoj','Sharma','it13manoj@gmail.com','9340334221','IT','Sales Manager','2026-08-08 00:00:00','100000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-08 13:13:22','2026-08-08 13:13:22'),
 (3,3,'PT202608153','Komal','Kushwaha','kushwahakomal382@gmail.com','95898 69227','IT','Web Developer','2026-08-01 00:00:00','4000.00',NULL,NULL,NULL,NULL,NULL,'2026-08-15 06:20:42','2026-08-15 06:20:42'),
-(4,4,'PT2025080101','Alok','Kumar','alok.kumar767@company.com',NULL,'General','Staff','2026-10-03 07:05:04',NULL,NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04'),
-(5,5,'PT2026010103','Vikki','Kumar','vikki.kumar598@company.com',NULL,'General','Staff','2026-10-03 07:05:04',NULL,NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-03 07:05:04');
+(4,4,'PT2025080101','Alok','Kumar','alok.kumar767@company.com',NULL,'General','Staff','2026-10-03 07:05:04','30000.00',NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-06 09:19:46'),
+(5,5,'PT2026010103','Vikki','Kumar','vikki.kumar598@company.com',NULL,'General','Staff','2026-10-03 07:05:04','28000.00',NULL,NULL,NULL,NULL,NULL,'2026-10-03 07:05:04','2026-10-06 09:19:46');
 /*!40000 ALTER TABLE `employees` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -126,7 +126,7 @@ CREATE TABLE `attendance` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_attendance` (`employee_id`,`date`),
   CONSTRAINT `attendance_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=117 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=159 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -135,7 +135,7 @@ CREATE TABLE `attendance` (
 
 LOCK TABLES `attendance` WRITE;
 /*!40000 ALTER TABLE `attendance` DISABLE KEYS */;
-INSERT INTO `attendance` VALUES (6,2,'PT202608082','Manoj Sharma','2026-08-08','14:15:17','16:43:37','present',285,106,'Late by 4h 45m (In: 02:15 PM) | Left early by 1h 46m (Out: 04:43 PM)','2.47',NULL,'["14:15:17","14:37:22","14:37:33","14:39:22","16:39:16","16:43:37"]','2026-10-03 07:26:06'),
+INSERT INTO `attendance` VALUES (6,2,'PT202608082','Manoj Sharma','2026-08-08','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-03 07:26:06'),
 (7,4,'PT2025080101','Alok Kumar','2026-08-08','14:14:45','18:58:33','present',284,0,'Late by 4h 44m (In: 02:14 PM) | Full day completed (Out: 06:58 PM)','4.73',NULL,'["14:14:45","14:14:57","14:35:10","14:35:21","14:35:36","18:58:33"]','2026-10-03 07:26:06'),
 (8,5,'PT2026010103','Vikki Kumar','2026-08-08','14:34:29','16:46:36','present',304,103,'Late by 5h 4m (In: 02:34 PM) | Left early by 1h 43m (Out: 04:46 PM)','2.20',NULL,'["14:34:29","16:46:36"]','2026-10-03 07:26:06'),
 (9,3,'PT202608153','Komal Kushwaha','2026-08-08','18:20:31',NULL,'present',530,0,'Late by 8h 50m (In: 06:20 PM) | No check-out recorded','0.00',NULL,'["18:20:31"]','2026-10-03 07:26:06'),
@@ -245,7 +245,49 @@ INSERT INTO `attendance` VALUES (6,2,'PT202608082','Manoj Sharma','2026-08-08','
 (113,2,'PT202608082','Manoj Sharma','2026-10-02','13:49:48',NULL,'present',259,0,'Late by 4h 19m (In: 01:49 PM) | No check-out recorded','0.00',NULL,'["13:49:48"]','2026-10-03 07:26:07'),
 (114,5,'PT2026010103','Vikki Kumar','2026-08-12','09:05:17','09:08:02','present',0,561,'On Time (In: 09:05 AM) | Left early by 9h 21m (Out: 09:08 AM)','0.05',NULL,'["09:05:17","09:05:34","09:06:16","09:08:02"]','2026-10-03 07:26:07'),
 (115,3,'PT202608153','Komal Kushwaha','2026-08-12','09:33:27',NULL,'present',3,0,'Late by 3m (In: 09:33 AM) | No check-out recorded','0.00',NULL,'["09:33:27"]','2026-10-03 07:26:07'),
-(116,2,'PT202608082','Manoj Sharma','2026-08-22','11:16:37',NULL,'present',106,0,'Late by 1h 46m (In: 11:16 AM) | No check-out recorded','0.00',NULL,'["11:16:37"]','2026-10-03 07:26:07');
+(116,2,'PT202608082','Manoj Sharma','2026-08-22','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-03 07:26:07'),
+(117,2,'PT202608082','Manoj Sharma','2026-09-01','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(118,2,'PT202608082','Manoj Sharma','2026-09-02','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(119,2,'PT202608082','Manoj Sharma','2026-09-04','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(120,2,'PT202608082','Manoj Sharma','2026-09-07','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(121,2,'PT202608082','Manoj Sharma','2026-09-08','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(122,2,'PT202608082','Manoj Sharma','2026-09-11','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(123,2,'PT202608082','Manoj Sharma','2026-09-12','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(124,2,'PT202608082','Manoj Sharma','2026-09-14','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(125,2,'PT202608082','Manoj Sharma','2026-09-15','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(126,2,'PT202608082','Manoj Sharma','2026-09-16','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(127,2,'PT202608082','Manoj Sharma','2026-09-17','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(128,2,'PT202608082','Manoj Sharma','2026-09-18','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(129,2,'PT202608082','Manoj Sharma','2026-09-19','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(130,2,'PT202608082','Manoj Sharma','2026-09-21','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(131,2,'PT202608082','Manoj Sharma','2026-09-22','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(132,2,'PT202608082','Manoj Sharma','2026-09-23','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(133,2,'PT202608082','Manoj Sharma','2026-09-24','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(134,2,'PT202608082','Manoj Sharma','2026-09-25','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(135,2,'PT202608082','Manoj Sharma','2026-09-26','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(136,2,'PT202608082','Manoj Sharma','2026-09-28','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(137,2,'PT202608082','Manoj Sharma','2026-09-29','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(138,2,'PT202608082','Manoj Sharma','2026-09-30','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(139,2,'PT202608082','Manoj Sharma','2026-08-04','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(140,2,'PT202608082','Manoj Sharma','2026-08-05','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(141,2,'PT202608082','Manoj Sharma','2026-08-06','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(142,2,'PT202608082','Manoj Sharma','2026-08-07','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(143,2,'PT202608082','Manoj Sharma','2026-08-10','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(144,2,'PT202608082','Manoj Sharma','2026-08-11','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(145,2,'PT202608082','Manoj Sharma','2026-08-12','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(146,2,'PT202608082','Manoj Sharma','2026-08-13','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(147,2,'PT202608082','Manoj Sharma','2026-08-14','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(148,2,'PT202608082','Manoj Sharma','2026-08-17','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(149,2,'PT202608082','Manoj Sharma','2026-08-18','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(150,2,'PT202608082','Manoj Sharma','2026-08-19','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(151,2,'PT202608082','Manoj Sharma','2026-08-20','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(152,2,'PT202608082','Manoj Sharma','2026-08-21','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(153,2,'PT202608082','Manoj Sharma','2026-08-24','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(154,2,'PT202608082','Manoj Sharma','2026-08-25','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(155,2,'PT202608082','Manoj Sharma','2026-08-26','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(156,2,'PT202608082','Manoj Sharma','2026-08-28','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(157,2,'PT202608082','Manoj Sharma','2026-08-29','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(158,2,'PT202608082','Manoj Sharma','2026-08-31','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32');
 /*!40000 ALTER TABLE `attendance` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -453,12 +495,20 @@ CREATE TABLE `salary` (
   `total_salary` decimal(10,2) DEFAULT NULL,
   `net_salary` decimal(10,2) DEFAULT NULL,
   `payment_date` date DEFAULT NULL,
-  `status` enum('pending','paid','cancelled') DEFAULT 'pending',
+  `status` enum('pending','approved','paid','cancelled') DEFAULT 'pending',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `present_days` int DEFAULT '0',
+  `absent_days` int DEFAULT '0',
+  `paid_leaves` int DEFAULT '1',
+  `unpaid_leaves` int DEFAULT '0',
+  `per_day_salary` decimal(10,2) DEFAULT '0.00',
+  `absent_deduction` decimal(10,2) DEFAULT '0.00',
+  `payment_method` varchar(50) DEFAULT 'Bank Transfer',
+  `notes` text,
   PRIMARY KEY (`id`),
   KEY `employee_id` (`employee_id`),
   CONSTRAINT `salary_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -467,7 +517,111 @@ CREATE TABLE `salary` (
 
 LOCK TABLES `salary` WRITE;
 /*!40000 ALTER TABLE `salary` DISABLE KEYS */;
+INSERT INTO `salary` VALUES (1,2,'2026-09-01','50000.00','50000.00','10000.00','0.00','100000.00','90000.00',NULL,'approved','2026-10-06 10:23:23',22,4,1,3,'3333.33','10000.00','Bank Transfer',NULL);
 /*!40000 ALTER TABLE `salary` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meetings`
+--
+
+DROP TABLE IF EXISTS `meetings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meetings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `meeting_id` varchar(50) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text,
+  `host_id` int DEFAULT NULL,
+  `host_name` varchar(100) NOT NULL,
+  `meeting_type` enum('group','one-on-one','department','all-hands') DEFAULT 'group',
+  `status` enum('scheduled','in-progress','completed','cancelled') DEFAULT 'scheduled',
+  `scheduled_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time DEFAULT NULL,
+  `duration_minutes` int DEFAULT '45',
+  `department` varchar(100) DEFAULT 'All',
+  `passcode` varchar(50) DEFAULT NULL,
+  `meeting_link` varchar(255) DEFAULT NULL,
+  `settings` text COMMENT 'JSON string for meeting settings like allowScreenShare, allowChat, allowDocumentShare',
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `invited_employees` text COMMENT 'JSON string of invited employees',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `meeting_id` (`meeting_id`),
+  KEY `host_id` (`host_id`),
+  CONSTRAINT `meetings_ibfk_1` FOREIGN KEY (`host_id`) REFERENCES `employees` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meetings`
+--
+
+LOCK TABLES `meetings` WRITE;
+/*!40000 ALTER TABLE `meetings` DISABLE KEYS */;
+/*!40000 ALTER TABLE `meetings` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meeting_documents`
+--
+
+DROP TABLE IF EXISTS `meeting_documents`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meeting_documents` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `meeting_id` varchar(50) NOT NULL,
+  `uploader_id` int DEFAULT NULL,
+  `uploader_name` varchar(100) NOT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `file_size` int DEFAULT '0',
+  `file_type` varchar(100) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meeting_documents`
+--
+
+LOCK TABLES `meeting_documents` WRITE;
+/*!40000 ALTER TABLE `meeting_documents` DISABLE KEYS */;
+/*!40000 ALTER TABLE `meeting_documents` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `meeting_messages`
+--
+
+DROP TABLE IF EXISTS `meeting_messages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `meeting_messages` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `meeting_id` varchar(50) NOT NULL,
+  `sender_id` int DEFAULT NULL,
+  `sender_name` varchar(100) NOT NULL,
+  `sender_role` varchar(50) DEFAULT 'Participant',
+  `message` text NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `meeting_messages`
+--
+
+LOCK TABLES `meeting_messages` WRITE;
+/*!40000 ALTER TABLE `meeting_messages` DISABLE KEYS */;
+/*!40000 ALTER TABLE `meeting_messages` ENABLE KEYS */;
 UNLOCK TABLES;
 
 

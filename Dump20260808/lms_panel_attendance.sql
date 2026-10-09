@@ -1,6 +1,6 @@
 -- MySQL dump for table `attendance`
 -- Database: lms_panel
--- Generated on 2026-10-03 09:49:31
+-- Generated on 2026-10-09 07:41:59
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -39,7 +39,7 @@ CREATE TABLE `attendance` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_attendance` (`employee_id`,`date`),
   CONSTRAINT `attendance_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=117 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=159 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -48,7 +48,7 @@ CREATE TABLE `attendance` (
 
 LOCK TABLES `attendance` WRITE;
 /*!40000 ALTER TABLE `attendance` DISABLE KEYS */;
-INSERT INTO `attendance` VALUES (6,2,'PT202608082','Manoj Sharma','2026-08-08','14:15:17','16:43:37','present',285,106,'Late by 4h 45m (In: 02:15 PM) | Left early by 1h 46m (Out: 04:43 PM)','2.47',NULL,'["14:15:17","14:37:22","14:37:33","14:39:22","16:39:16","16:43:37"]','2026-10-03 07:26:06'),
+INSERT INTO `attendance` VALUES (6,2,'PT202608082','Manoj Sharma','2026-08-08','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-03 07:26:06'),
 (7,4,'PT2025080101','Alok Kumar','2026-08-08','14:14:45','18:58:33','present',284,0,'Late by 4h 44m (In: 02:14 PM) | Full day completed (Out: 06:58 PM)','4.73',NULL,'["14:14:45","14:14:57","14:35:10","14:35:21","14:35:36","18:58:33"]','2026-10-03 07:26:06'),
 (8,5,'PT2026010103','Vikki Kumar','2026-08-08','14:34:29','16:46:36','present',304,103,'Late by 5h 4m (In: 02:34 PM) | Left early by 1h 43m (Out: 04:46 PM)','2.20',NULL,'["14:34:29","16:46:36"]','2026-10-03 07:26:06'),
 (9,3,'PT202608153','Komal Kushwaha','2026-08-08','18:20:31',NULL,'present',530,0,'Late by 8h 50m (In: 06:20 PM) | No check-out recorded','0.00',NULL,'["18:20:31"]','2026-10-03 07:26:06'),
@@ -158,7 +158,49 @@ INSERT INTO `attendance` VALUES (6,2,'PT202608082','Manoj Sharma','2026-08-08','
 (113,2,'PT202608082','Manoj Sharma','2026-10-02','13:49:48',NULL,'present',259,0,'Late by 4h 19m (In: 01:49 PM) | No check-out recorded','0.00',NULL,'["13:49:48"]','2026-10-03 07:26:07'),
 (114,5,'PT2026010103','Vikki Kumar','2026-08-12','09:05:17','09:08:02','present',0,561,'On Time (In: 09:05 AM) | Left early by 9h 21m (Out: 09:08 AM)','0.05',NULL,'["09:05:17","09:05:34","09:06:16","09:08:02"]','2026-10-03 07:26:07'),
 (115,3,'PT202608153','Komal Kushwaha','2026-08-12','09:33:27',NULL,'present',3,0,'Late by 3m (In: 09:33 AM) | No check-out recorded','0.00',NULL,'["09:33:27"]','2026-10-03 07:26:07'),
-(116,2,'PT202608082','Manoj Sharma','2026-08-22','11:16:37',NULL,'present',106,0,'Late by 1h 46m (In: 11:16 AM) | No check-out recorded','0.00',NULL,'["11:16:37"]','2026-10-03 07:26:07');
+(116,2,'PT202608082','Manoj Sharma','2026-08-22','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-03 07:26:07'),
+(117,2,'PT202608082','Manoj Sharma','2026-09-01','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(118,2,'PT202608082','Manoj Sharma','2026-09-02','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(119,2,'PT202608082','Manoj Sharma','2026-09-04','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(120,2,'PT202608082','Manoj Sharma','2026-09-07','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(121,2,'PT202608082','Manoj Sharma','2026-09-08','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(122,2,'PT202608082','Manoj Sharma','2026-09-11','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(123,2,'PT202608082','Manoj Sharma','2026-09-12','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(124,2,'PT202608082','Manoj Sharma','2026-09-14','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(125,2,'PT202608082','Manoj Sharma','2026-09-15','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(126,2,'PT202608082','Manoj Sharma','2026-09-16','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(127,2,'PT202608082','Manoj Sharma','2026-09-17','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(128,2,'PT202608082','Manoj Sharma','2026-09-18','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(129,2,'PT202608082','Manoj Sharma','2026-09-19','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(130,2,'PT202608082','Manoj Sharma','2026-09-21','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(131,2,'PT202608082','Manoj Sharma','2026-09-22','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(132,2,'PT202608082','Manoj Sharma','2026-09-23','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(133,2,'PT202608082','Manoj Sharma','2026-09-24','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(134,2,'PT202608082','Manoj Sharma','2026-09-25','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(135,2,'PT202608082','Manoj Sharma','2026-09-26','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(136,2,'PT202608082','Manoj Sharma','2026-09-28','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(137,2,'PT202608082','Manoj Sharma','2026-09-29','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(138,2,'PT202608082','Manoj Sharma','2026-09-30','09:25:00','18:30:00','present',0,0,'On Time (In: 09:25 AM) | Full day completed (Out: 06:30 PM)','9.08',NULL,'["09:25:00","18:30:00"]','2026-10-06 10:03:23'),
+(139,2,'PT202608082','Manoj Sharma','2026-08-04','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(140,2,'PT202608082','Manoj Sharma','2026-08-05','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(141,2,'PT202608082','Manoj Sharma','2026-08-06','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(142,2,'PT202608082','Manoj Sharma','2026-08-07','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(143,2,'PT202608082','Manoj Sharma','2026-08-10','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(144,2,'PT202608082','Manoj Sharma','2026-08-11','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(145,2,'PT202608082','Manoj Sharma','2026-08-12','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(146,2,'PT202608082','Manoj Sharma','2026-08-13','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(147,2,'PT202608082','Manoj Sharma','2026-08-14','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(148,2,'PT202608082','Manoj Sharma','2026-08-17','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(149,2,'PT202608082','Manoj Sharma','2026-08-18','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(150,2,'PT202608082','Manoj Sharma','2026-08-19','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(151,2,'PT202608082','Manoj Sharma','2026-08-20','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(152,2,'PT202608082','Manoj Sharma','2026-08-21','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(153,2,'PT202608082','Manoj Sharma','2026-08-24','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(154,2,'PT202608082','Manoj Sharma','2026-08-25','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(155,2,'PT202608082','Manoj Sharma','2026-08-26','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(156,2,'PT202608082','Manoj Sharma','2026-08-28','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(157,2,'PT202608082','Manoj Sharma','2026-08-29','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32'),
+(158,2,'PT202608082','Manoj Sharma','2026-08-31','09:20:00','18:30:00','present',0,0,'On Time (In: 09:20 AM) | Full day completed (Out: 06:30 PM)','9.17',NULL,'["09:20:00","18:30:00"]','2026-10-06 10:04:32');
 /*!40000 ALTER TABLE `attendance` ENABLE KEYS */;
 UNLOCK TABLES;
 

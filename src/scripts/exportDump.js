@@ -11,7 +11,10 @@ const TABLES = [
   'payments',
   'performance',
   'policies',
-  'salary'
+  'salary',
+  'meetings',
+  'meeting_documents',
+  'meeting_messages'
 ];
 
 function escapeValue(val) {

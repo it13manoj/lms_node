@@ -1,4 +1,4 @@
--- MySQL dump for table `policies`
+-- MySQL dump for table `meeting_documents`
 -- Database: lms_panel
 -- Generated on 2026-10-09 07:41:59
 
@@ -14,38 +14,34 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `policies`
+-- Table structure for table `meeting_documents`
 --
 
-DROP TABLE IF EXISTS `policies`;
+DROP TABLE IF EXISTS `meeting_documents`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `policies` (
+CREATE TABLE `meeting_documents` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `title` varchar(200) NOT NULL,
-  `description` text,
-  `policy_type` enum('hr','company','employee','manager','sales','team') NOT NULL,
-  `category` varchar(100) DEFAULT NULL,
-  `file_url` varchar(255) DEFAULT NULL,
-  `version` varchar(20) DEFAULT NULL,
-  `effective_date` date DEFAULT NULL,
-  `created_by` int DEFAULT NULL,
-  `status` enum('active','inactive') DEFAULT 'active',
+  `meeting_id` varchar(50) NOT NULL,
+  `uploader_id` int DEFAULT NULL,
+  `uploader_name` varchar(100) NOT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `file_size` int DEFAULT '0',
+  `file_type` varchar(100) DEFAULT NULL,
   `created_at` datetime NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `created_by` (`created_by`),
-  CONSTRAINT `policies_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `policies`
+-- Dumping data for table `meeting_documents`
 --
 
-LOCK TABLES `policies` WRITE;
-/*!40000 ALTER TABLE `policies` DISABLE KEYS */;
-INSERT INTO `policies` VALUES (1,'General Conduct','Employees must maintain professionalism and integrity at all times. Respect colleagues, clients, and\ncompany property. Harassment, discrimination, or misconduct will not be tolerated.\n','hr','General',NULL,'1.0','2026-02-01',1,'active','2026-08-15 06:00:15');
-/*!40000 ALTER TABLE `policies` ENABLE KEYS */;
+LOCK TABLES `meeting_documents` WRITE;
+/*!40000 ALTER TABLE `meeting_documents` DISABLE KEYS */;
+/*!40000 ALTER TABLE `meeting_documents` ENABLE KEYS */;
 UNLOCK TABLES;
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
