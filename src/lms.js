@@ -54,6 +54,7 @@ io.on('connection', (socket) => {
         };
 
         meetingRooms.get(meetingId).set(socket.id, participant);
+        console.log(`[Socket.IO] User "${participant.name}" (${socket.id}) joined room "${meetingId}". Room count: ${meetingRooms.get(meetingId).size}`);
 
         // Notify other participants in the room that a new peer joined
         socket.to(meetingId).emit('user-joined', participant);
