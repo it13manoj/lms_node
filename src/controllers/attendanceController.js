@@ -380,12 +380,18 @@ const getDailyAttendance = async (req, res) => {
     try {
         let { date, status, search } = req.query;
 
-        // If no date provided, pick the latest date from attendance or today
+        // If no date provided, pick today's date if attendance exists, or latest date, or today's date
         if (!date) {
-            const latestAtt = await Attendance.findOne({
-                order: [['date', 'DESC']]
-            });
-            date = latestAtt ? latestAtt.date : moment().format('YYYY-MM-DD');
+            const todayStr = moment().utcOffset('+05:30').format('YYYY-MM-DD');
+            const todayAtt = await Attendance.findOne({ where: { date: todayStr } });
+            if (todayAtt) {
+                date = todayStr;
+            } else {
+                const latestAtt = await Attendance.findOne({
+                    order: [['date', 'DESC']]
+                });
+                date = latestAtt ? latestAtt.date : todayStr;
+            }
         } else {
             date = normalizeDate(date) || date;
         }
@@ -655,7 +661,12 @@ const checkIn = async (req, res) => {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        const today = moment().format('YYYY-MM-DD');
+        // Use client current date/time if provided, otherwise fallback to IST (+05:30)
+        const istMoment = moment().utcOffset('+05:30');
+        const today = req.body.date || istMoment.format('YYYY-MM-DD');
+        let nowTime = req.body.time || istMoment.format('HH:mm:ss');
+        if (nowTime && nowTime.length === 5) nowTime = `${nowTime}:00`;
+
         const existingAttendance = await Attendance.findOne({
             where: {
                 employee_id: employee.id,
@@ -663,11 +674,10 @@ const checkIn = async (req, res) => {
             }
         });
 
-        if (existingAttendance && existingAttendance.check_in) {
+        if (existingAttendance && existingAttendance.check_in && !req.body.allowUpdate) {
             return res.status(400).json({ message: 'Already checked in today' });
         }
 
-        const nowTime = moment().format('HH:mm:ss');
         const inSec = timeToSeconds(nowTime);
         const officeStartSec = timeToSeconds(OFFICE_START_TIME);
         let lateMinutes = 0;
@@ -681,12 +691,22 @@ const checkIn = async (req, res) => {
 
         let attendance;
         if (existingAttendance) {
+            let currentPunches = [];
+            try {
+                currentPunches = existingAttendance.raw_punches ? JSON.parse(existingAttendance.raw_punches) : [];
+            } catch (e) {
+                currentPunches = [];
+            }
+            if (!currentPunches.includes(nowTime)) {
+                currentPunches.unshift(nowTime);
+            }
+
             await existingAttendance.update({
                 check_in: nowTime,
                 status: 'present',
                 late_minutes: lateMinutes,
                 remarks: lateComment,
-                raw_punches: JSON.stringify([nowTime])
+                raw_punches: JSON.stringify(currentPunches.length > 0 ? currentPunches : [nowTime])
             });
             attendance = existingAttendance;
         } else {
@@ -706,7 +726,10 @@ const checkIn = async (req, res) => {
         res.json({
             success: true,
             message: 'Checked in successfully',
-            data: attendance
+            data: {
+                ...attendance.toJSON(),
+                check_in_formatted: formatTime12(nowTime)
+            }
         });
     } catch (error) {
         console.error('Check in error:', error);
@@ -727,7 +750,12 @@ const checkOut = async (req, res) => {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        const today = moment().format('YYYY-MM-DD');
+        // Use client current date/time if provided, otherwise fallback to IST (+05:30)
+        const istMoment = moment().utcOffset('+05:30');
+        const today = req.body.date || istMoment.format('YYYY-MM-DD');
+        let checkOutTime = req.body.time || istMoment.format('HH:mm:ss');
+        if (checkOutTime && checkOutTime.length === 5) checkOutTime = `${checkOutTime}:00`;
+
         const attendance = await Attendance.findOne({
             where: {
                 employee_id: employee.id,
@@ -739,11 +767,10 @@ const checkOut = async (req, res) => {
             return res.status(404).json({ message: 'No check-in found for today' });
         }
 
-        if (attendance.check_out) {
+        if (attendance.check_out && !req.body.allowUpdate) {
             return res.status(400).json({ message: 'Already checked out' });
         }
 
-        const checkOutTime = moment().format('HH:mm:ss');
         const checkInTime = moment(attendance.check_in, 'HH:mm:ss');
         const checkOutMoment = moment(checkOutTime, 'HH:mm:ss');
         const workingHours = parseFloat(checkOutMoment.diff(checkInTime, 'hours', true).toFixed(2));
@@ -766,13 +793,15 @@ const checkOut = async (req, res) => {
         } catch (e) {
             currentPunches = [attendance.check_in];
         }
-        currentPunches.push(checkOutTime);
+        if (!currentPunches.includes(checkOutTime)) {
+            currentPunches.push(checkOutTime);
+        }
 
         const updatedRemarks = `${attendance.remarks || ''} | ${earlyLeaveComment}`.replace(/^ \| /, '');
 
         await attendance.update({
             check_out: checkOutTime,
-            working_hours: workingHours,
+            working_hours: workingHours > 0 ? workingHours : 0,
             early_leave_minutes: earlyLeaveMinutes,
             remarks: updatedRemarks,
             raw_punches: JSON.stringify(currentPunches)
@@ -781,7 +810,10 @@ const checkOut = async (req, res) => {
         res.json({
             success: true,
             message: 'Checked out successfully',
-            data: attendance
+            data: {
+                ...attendance.toJSON(),
+                check_out_formatted: formatTime12(checkOutTime)
+            }
         });
     } catch (error) {
         console.error('Check out error:', error);
@@ -802,7 +834,8 @@ const getAttendanceStats = async (req, res) => {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        const today = moment().format('YYYY-MM-DD');
+        const istMoment = moment().utcOffset('+05:30');
+        const today = req.query.date || istMoment.format('YYYY-MM-DD');
         const todayAttendance = await Attendance.findOne({
             where: {
                 employee_id: employee.id,
@@ -810,8 +843,8 @@ const getAttendanceStats = async (req, res) => {
             }
         });
 
-        const monthStart = moment().startOf('month').format('YYYY-MM-DD');
-        const monthEnd = moment().endOf('month').format('YYYY-MM-DD');
+        const monthStart = istMoment.clone().startOf('month').format('YYYY-MM-DD');
+        const monthEnd = istMoment.clone().endOf('month').format('YYYY-MM-DD');
         const monthlyAttendance = await Attendance.findAll({
             where: {
                 employee_id: employee.id,
@@ -845,8 +878,10 @@ const getAttendanceStats = async (req, res) => {
             success: true,
             data: {
                 todayStatus,
-                checkInTime: todayAttendance?.check_in || null,
-                checkOutTime: todayAttendance?.check_out || null,
+                checkInTime: todayAttendance?.check_in ? formatTime12(todayAttendance.check_in) : null,
+                checkOutTime: todayAttendance?.check_out ? formatTime12(todayAttendance.check_out) : null,
+                rawCheckIn: todayAttendance?.check_in || null,
+                rawCheckOut: todayAttendance?.check_out || null,
                 monthlyStats
             }
         });
