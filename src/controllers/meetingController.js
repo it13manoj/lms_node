@@ -126,7 +126,8 @@ const createMeeting = async (req, res) => {
             department, 
             passcode,
             custom_meeting_id,
-            settings 
+            settings,
+            invited_employees 
         } = req.body;
 
         if (!title || !scheduled_date || !start_time) {
@@ -165,6 +166,10 @@ const createMeeting = async (req, res) => {
             muteOnJoin: false
         });
 
+        const invitedEmployeesStr = Array.isArray(invited_employees)
+            ? JSON.stringify(invited_employees)
+            : (typeof invited_employees === 'string' ? invited_employees : '[]');
+
         const newMeeting = await Meeting.create({
             meeting_id: meetingId,
             title: title.trim(),
@@ -180,7 +185,8 @@ const createMeeting = async (req, res) => {
             department: department || 'All',
             passcode: passcode || '',
             meeting_link: `/meetings/${meetingId}`,
-            settings: defaultSettings
+            settings: defaultSettings,
+            invited_employees: invitedEmployeesStr
         });
 
         res.status(201).json({

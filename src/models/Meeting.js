@@ -73,6 +73,11 @@ const Meeting = sequelize.define('Meeting', {
         type: DataTypes.TEXT,
         allowNull: true,
         comment: 'JSON string for meeting settings like allowScreenShare, allowChat, allowDocumentShare'
+    },
+    invited_employees: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'JSON string of invited employees'
     }
 }, {
     tableName: 'meetings',
