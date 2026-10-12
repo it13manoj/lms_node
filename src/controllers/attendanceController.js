@@ -5,6 +5,42 @@ const Holiday = require('../models/Holiday');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const moment = require('moment');
+const fs = require('fs');
+const path = require('path');
+
+// Helper: Save punch snapshot photo (base64 string to image file on disk)
+const savePunchImage = (base64Data, employeeId, type = 'in') => {
+    if (!base64Data || typeof base64Data !== 'string') return null;
+    try {
+        const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        let ext = 'jpg';
+        let buffer;
+        if (matches && matches.length === 3) {
+            const mime = matches[1];
+            if (mime.includes('png')) ext = 'png';
+            else if (mime.includes('webp')) ext = 'webp';
+            buffer = Buffer.from(matches[2], 'base64');
+        } else if (base64Data.startsWith('/uploads/') || base64Data.startsWith('http')) {
+            return base64Data;
+        } else {
+            buffer = Buffer.from(base64Data, 'base64');
+        }
+
+        const uploadDir = path.join(__dirname, '../../uploads/attendance');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        const filename = `punch_${type}_emp${employeeId}_${Date.now()}.${ext}`;
+        const filePath = path.join(uploadDir, filename);
+        fs.writeFileSync(filePath, buffer);
+
+        return `/uploads/attendance/${filename}`;
+    } catch (err) {
+        console.error('Error saving punch image to disk:', err);
+        return base64Data;
+    }
+};
 
 // Standard Office Timing constants
 const OFFICE_START_TIME = '09:30:00'; // 9:30 AM
@@ -490,8 +526,10 @@ const getDailyAttendance = async (req, res) => {
                     early_leave_comment: earlyLeaveComment,
                     check_in: attRecord.check_in,
                     check_in_formatted: formatTime12(attRecord.check_in),
+                    check_in_image: attRecord.check_in_image || null,
                     check_out: attRecord.check_out,
                     check_out_formatted: formatTime12(attRecord.check_out),
+                    check_out_image: attRecord.check_out_image || null,
                     working_hours: parseFloat(attRecord.working_hours || 0),
                     working_hours_formatted: `${Math.floor(attRecord.working_hours || 0)}h ${Math.round(((attRecord.working_hours || 0) % 1) * 60)}m`,
                     remarks: attRecord.remarks || `${lateComment} | ${earlyLeaveComment}`,
@@ -557,8 +595,10 @@ const getDailyAttendance = async (req, res) => {
                         early_leave_comment: isEarlyLeave ? `Left early by ${formatMinutes(att.early_leave_minutes)}` : 'Completed',
                         check_in: att.check_in,
                         check_in_formatted: formatTime12(att.check_in),
+                        check_in_image: att.check_in_image || null,
                         check_out: att.check_out,
                         check_out_formatted: formatTime12(att.check_out),
+                        check_out_image: att.check_out_image || null,
                         working_hours: parseFloat(att.working_hours || 0),
                         working_hours_formatted: `${Math.floor(att.working_hours || 0)}h ${Math.round(((att.working_hours || 0) % 1) * 60)}m`,
                         remarks: att.remarks,
@@ -689,6 +729,8 @@ const checkIn = async (req, res) => {
             lateComment = `On Time (In: ${formatTime12(nowTime)})`;
         }
 
+        const savedImage = req.body.image ? savePunchImage(req.body.image, employee.id, 'in') : null;
+
         let attendance;
         if (existingAttendance) {
             let currentPunches = [];
@@ -701,13 +743,18 @@ const checkIn = async (req, res) => {
                 currentPunches.unshift(nowTime);
             }
 
-            await existingAttendance.update({
+            const updateData = {
                 check_in: nowTime,
                 status: 'present',
                 late_minutes: lateMinutes,
                 remarks: lateComment,
                 raw_punches: JSON.stringify(currentPunches.length > 0 ? currentPunches : [nowTime])
-            });
+            };
+            if (savedImage) {
+                updateData.check_in_image = savedImage;
+            }
+
+            await existingAttendance.update(updateData);
             attendance = existingAttendance;
         } else {
             attendance = await Attendance.create({
@@ -716,6 +763,7 @@ const checkIn = async (req, res) => {
                 employee_name: `${employee.first_name} ${employee.last_name}`,
                 date: today,
                 check_in: nowTime,
+                check_in_image: savedImage,
                 status: 'present',
                 late_minutes: lateMinutes,
                 remarks: lateComment,
@@ -728,7 +776,8 @@ const checkIn = async (req, res) => {
             message: 'Checked in successfully',
             data: {
                 ...attendance.toJSON(),
-                check_in_formatted: formatTime12(nowTime)
+                check_in_formatted: formatTime12(nowTime),
+                check_in_image: savedImage || attendance.check_in_image || null
             }
         });
     } catch (error) {
@@ -797,22 +846,30 @@ const checkOut = async (req, res) => {
             currentPunches.push(checkOutTime);
         }
 
+        const savedImage = req.body.image ? savePunchImage(req.body.image, employee.id, 'out') : null;
+
         const updatedRemarks = `${attendance.remarks || ''} | ${earlyLeaveComment}`.replace(/^ \| /, '');
 
-        await attendance.update({
+        const updateData = {
             check_out: checkOutTime,
             working_hours: workingHours > 0 ? workingHours : 0,
             early_leave_minutes: earlyLeaveMinutes,
             remarks: updatedRemarks,
             raw_punches: JSON.stringify(currentPunches)
-        });
+        };
+        if (savedImage) {
+            updateData.check_out_image = savedImage;
+        }
+
+        await attendance.update(updateData);
 
         res.json({
             success: true,
             message: 'Checked out successfully',
             data: {
                 ...attendance.toJSON(),
-                check_out_formatted: formatTime12(checkOutTime)
+                check_out_formatted: formatTime12(checkOutTime),
+                check_out_image: savedImage || attendance.check_out_image || null
             }
         });
     } catch (error) {
@@ -880,6 +937,8 @@ const getAttendanceStats = async (req, res) => {
                 todayStatus,
                 checkInTime: todayAttendance?.check_in ? formatTime12(todayAttendance.check_in) : null,
                 checkOutTime: todayAttendance?.check_out ? formatTime12(todayAttendance.check_out) : null,
+                checkInImage: todayAttendance?.check_in_image || null,
+                checkOutImage: todayAttendance?.check_out_image || null,
                 rawCheckIn: todayAttendance?.check_in || null,
                 rawCheckOut: todayAttendance?.check_out || null,
                 monthlyStats
@@ -1082,8 +1141,10 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
                     early_leave_comment: earlyLeaveComment,
                     check_in: att.check_in,
                     check_in_formatted: formatTime12(att.check_in),
+                    check_in_image: att.check_in_image || null,
                     check_out: att.check_out,
                     check_out_formatted: formatTime12(att.check_out),
+                    check_out_image: att.check_out_image || null,
                     working_hours: wHours,
                     working_hours_formatted: `${Math.floor(wHours)}h ${Math.round((wHours % 1) * 60)}m`,
                     remarks: att.remarks || `${lateComment} | ${earlyLeaveComment}`,

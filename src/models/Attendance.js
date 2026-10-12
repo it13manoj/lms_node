@@ -63,6 +63,14 @@ const Attendance = sequelize.define('Attendance', {
     raw_punches: {
         type: DataTypes.TEXT,
         allowNull: true
+    },
+    check_in_image: {
+        type: DataTypes.TEXT('long'),
+        allowNull: true
+    },
+    check_out_image: {
+        type: DataTypes.TEXT('long'),
+        allowNull: true
     }
 }, {
     tableName: 'attendance',
