@@ -10,6 +10,7 @@ const {
     checkIn,
     checkOut,
     syncSystemOffTime,
+    recordHeartbeat,
     getAttendanceStats
 } = require('../controllers/attendanceController');
 const { protect, authorize } = require('../middleware/auth');
@@ -57,6 +58,7 @@ router.get('/sample-csv', (req, res) => {
 router.post('/check-in', protect, checkIn);
 router.post('/check-out', protect, checkOut);
 router.post('/sync-system-off-time', protect, syncSystemOffTime);
+router.post('/heartbeat', protect, recordHeartbeat);
 router.get('/stats', protect, getAttendanceStats);
 
 module.exports = router;

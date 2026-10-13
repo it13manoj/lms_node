@@ -884,9 +884,20 @@ const checkOut = async (req, res) => {
         const checkOutMoment = moment(checkOutTime, 'HH:mm:ss');
         const workingHours = parseFloat(checkOutMoment.diff(checkInTime, 'hours', true).toFixed(2));
 
-        const systemOffMinutes = req.body.system_off_minutes !== undefined 
+        let systemOffMinutes = req.body.system_off_minutes !== undefined 
             ? parseInt(req.body.system_off_minutes, 10) 
             : (attendance.system_off_minutes || 0);
+
+        // Account for any gap when system/app was closed or inactive before punch out
+        if (attendance.last_activity_time) {
+            const lastActMoment = moment(attendance.last_activity_time).utcOffset('+05:30');
+            const checkOutFullMoment = moment(`${attendance.date} ${checkOutTime}`, 'YYYY-MM-DD HH:mm:ss');
+            const gapMinutes = checkOutFullMoment.diff(lastActMoment, 'minutes');
+            if (gapMinutes > 30) {
+                const unloggedOff = gapMinutes - 30;
+                systemOffMinutes = Math.max(systemOffMinutes, (attendance.system_off_minutes || 0) + unloggedOff);
+            }
+        }
 
         const grossHours = workingHours > 0 ? workingHours : 0;
         const offHours = systemOffMinutes / 60;
@@ -1017,6 +1028,58 @@ const syncSystemOffTime = async (req, res) => {
     }
 };
 
+// @desc    Record employee live activity heartbeat while checked in
+// @route   POST /api/attendance/heartbeat
+// @access  Private
+const recordHeartbeat = async (req, res) => {
+    try {
+        const employee = await Employee.findOne({
+            where: { user_id: req.user.id }
+        });
+        if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
+
+        const istMoment = moment().utcOffset('+05:30');
+        const today = req.body.date || istMoment.format('YYYY-MM-DD');
+
+        const attendance = await Attendance.findOne({
+            where: {
+                employee_id: employee.id,
+                date: today
+            }
+        });
+
+        if (!attendance || !attendance.check_in || attendance.check_out) {
+            return res.json({ success: true, message: 'No active checked-in session' });
+        }
+
+        const now = new Date();
+        const updateData = { last_activity_time: now };
+
+        if (req.body.system_off_minutes !== undefined) {
+            const clientOff = parseInt(req.body.system_off_minutes, 10);
+            if (!isNaN(clientOff) && clientOff >= (attendance.system_off_minutes || 0)) {
+                updateData.system_off_minutes = clientOff;
+                const inTime = moment(attendance.check_in, 'HH:mm:ss');
+                const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
+                const grossHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
+                updateData.net_working_hours = parseFloat(Math.max(0, grossHours - (clientOff / 60)).toFixed(2));
+            }
+        }
+
+        await attendance.update(updateData);
+        res.json({
+            success: true,
+            data: {
+                last_activity_time: now,
+                system_off_minutes: updateData.system_off_minutes !== undefined ? updateData.system_off_minutes : (attendance.system_off_minutes || 0)
+            }
+        });
+    } catch (err) {
+        console.error('Heartbeat error:', err);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
 // @desc    Get personal attendance stats
 // @route   GET /api/attendance/stats
 // @access  Private
@@ -1072,13 +1135,24 @@ const getAttendanceStats = async (req, res) => {
 
         // Calculate live working hours if currently checked in
         let liveWorkingHours = parseFloat(todayAttendance?.working_hours || 0);
+        let currentOffMinutes = todayAttendance?.system_off_minutes || 0;
+
         if (todayAttendance?.check_in && !todayAttendance?.check_out) {
             const inTime = moment(todayAttendance.check_in, 'HH:mm:ss');
             const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
             liveWorkingHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
+
+            // Inactivity check while application was closed or idle (> 30 mins)
+            if (todayAttendance.last_activity_time) {
+                const lastActMoment = moment(todayAttendance.last_activity_time).utcOffset('+05:30');
+                const awayMinutes = istMoment.diff(lastActMoment, 'minutes');
+                if (awayMinutes > 30) {
+                    const extraOff = awayMinutes - 30;
+                    currentOffMinutes = Math.max(currentOffMinutes, (todayAttendance.system_off_minutes || 0) + extraOff);
+                }
+            }
         }
 
-        const currentOffMinutes = todayAttendance?.system_off_minutes || 0;
         const netLiveHours = parseFloat(Math.max(0, liveWorkingHours - (currentOffMinutes / 60)).toFixed(2));
 
         res.json({
@@ -1486,5 +1560,6 @@ module.exports = {
     checkIn,
     checkOut,
     syncSystemOffTime,
+    recordHeartbeat,
     getAttendanceStats
 };
