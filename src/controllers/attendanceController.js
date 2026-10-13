@@ -78,6 +78,36 @@ const cleanCell = (cell) => {
     return cell.trim().replace(/^['"\s]+|['"\s]+$/g, '');
 };
 
+// Helper: Check if request is originating from a mobile device or tablet
+const isMobileRequest = (req) => {
+    if (!req) return false;
+
+    // 1. Client header sent by frontend device detector
+    if (req.headers && req.headers['x-device-type'] === 'mobile') {
+        return true;
+    }
+
+    // 2. Client hints header sent by modern Chromium mobile browsers
+    const secChUaMobile = req.headers ? req.headers['sec-ch-ua-mobile'] : null;
+    if (secChUaMobile === '?1') {
+        return true;
+    }
+
+    // 3. User-Agent inspection for mobile/tablet devices
+    const userAgent = (req.headers && req.headers['user-agent']) || '';
+    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Silk|Kindle/i;
+    if (mobileRegex.test(userAgent)) {
+        return true;
+    }
+
+    // 4. Request body flag if provided
+    if (req.body && (req.body.isMobile === true || req.body.deviceType === 'mobile')) {
+        return true;
+    }
+
+    return false;
+};
+
 // Helper: Normalize date string to standard YYYY-MM-DD
 const normalizeDate = (rawDateStr) => {
     if (!rawDateStr) return null;
@@ -699,6 +729,14 @@ const getAttendanceDates = async (req, res) => {
 // @access  Private
 const checkIn = async (req, res) => {
     try {
+        // Restrict punch-in on mobile devices: attendance punch is strictly required via desktop/laptop system
+        if (isMobileRequest(req)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Punch-In is restricted on mobile devices. Attendance punches are strictly required to be recorded from an office desktop or laptop system.'
+            });
+        }
+
         const employee = await Employee.findOne({
             where: { user_id: req.user.id }
         });
@@ -805,6 +843,14 @@ const checkIn = async (req, res) => {
 // @access  Private
 const checkOut = async (req, res) => {
     try {
+        // Restrict punch-out on mobile devices: attendance punch is strictly required via desktop/laptop system
+        if (isMobileRequest(req)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Punch-Out is restricted on mobile devices. Attendance punches are strictly required to be recorded from an office desktop or laptop system.'
+            });
+        }
+
         const employee = await Employee.findOne({
             where: { user_id: req.user.id }
         });
