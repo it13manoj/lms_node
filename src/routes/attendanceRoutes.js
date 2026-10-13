@@ -9,6 +9,7 @@ const {
     getEmployeeMonthlyAttendance,
     checkIn,
     checkOut,
+    syncSystemOffTime,
     getAttendanceStats
 } = require('../controllers/attendanceController');
 const { protect, authorize } = require('../middleware/auth');
@@ -55,6 +56,7 @@ router.get('/sample-csv', (req, res) => {
 // Self-service Check in / Check out / Stats
 router.post('/check-in', protect, checkIn);
 router.post('/check-out', protect, checkOut);
+router.post('/sync-system-off-time', protect, syncSystemOffTime);
 router.get('/stats', protect, getAttendanceStats);
 
 module.exports = router;

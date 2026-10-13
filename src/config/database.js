@@ -36,6 +36,21 @@ const ensureAttendanceColumns = async () => {
             await sequelize.query("ALTER TABLE attendance ADD COLUMN check_out_image LONGTEXT NULL");
             console.log("✅ Added check_out_image column to attendance table");
         }
+        const [offCol] = await sequelize.query("SHOW COLUMNS FROM attendance LIKE 'system_off_minutes'");
+        if (!offCol || offCol.length === 0) {
+            await sequelize.query("ALTER TABLE attendance ADD COLUMN system_off_minutes INT DEFAULT 0");
+            console.log("✅ Added system_off_minutes column to attendance table");
+        }
+        const [netCol] = await sequelize.query("SHOW COLUMNS FROM attendance LIKE 'net_working_hours'");
+        if (!netCol || netCol.length === 0) {
+            await sequelize.query("ALTER TABLE attendance ADD COLUMN net_working_hours DECIMAL(5,2) NULL");
+            console.log("✅ Added net_working_hours column to attendance table");
+        }
+        const [actCol] = await sequelize.query("SHOW COLUMNS FROM attendance LIKE 'last_activity_time'");
+        if (!actCol || actCol.length === 0) {
+            await sequelize.query("ALTER TABLE attendance ADD COLUMN last_activity_time DATETIME NULL");
+            console.log("✅ Added last_activity_time column to attendance table");
+        }
     } catch (err) {
         console.warn("⚠️ Attendance columns check notice:", err.message);
     }

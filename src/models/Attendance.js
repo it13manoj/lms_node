@@ -71,6 +71,18 @@ const Attendance = sequelize.define('Attendance', {
     check_out_image: {
         type: DataTypes.TEXT('long'),
         allowNull: true
+    },
+    system_off_minutes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    net_working_hours: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true
+    },
+    last_activity_time: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     tableName: 'attendance',

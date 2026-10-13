@@ -532,6 +532,9 @@ const getDailyAttendance = async (req, res) => {
                     check_out_image: attRecord.check_out_image || null,
                     working_hours: parseFloat(attRecord.working_hours || 0),
                     working_hours_formatted: `${Math.floor(attRecord.working_hours || 0)}h ${Math.round(((attRecord.working_hours || 0) % 1) * 60)}m`,
+                    system_off_minutes: attRecord.system_off_minutes || 0,
+                    system_off_formatted: formatMinutes(attRecord.system_off_minutes || 0),
+                    net_working_hours: parseFloat(attRecord.net_working_hours !== null && attRecord.net_working_hours !== undefined ? attRecord.net_working_hours : (attRecord.working_hours || 0)),
                     remarks: attRecord.remarks || `${lateComment} | ${earlyLeaveComment}`,
                     raw_punches: attRecord.raw_punches ? JSON.parse(attRecord.raw_punches) : [],
                     is_on_time: isOnTime
@@ -601,6 +604,9 @@ const getDailyAttendance = async (req, res) => {
                         check_out_image: att.check_out_image || null,
                         working_hours: parseFloat(att.working_hours || 0),
                         working_hours_formatted: `${Math.floor(att.working_hours || 0)}h ${Math.round(((att.working_hours || 0) % 1) * 60)}m`,
+                        system_off_minutes: att.system_off_minutes || 0,
+                        system_off_formatted: formatMinutes(att.system_off_minutes || 0),
+                        net_working_hours: parseFloat(att.net_working_hours !== null && att.net_working_hours !== undefined ? att.net_working_hours : (att.working_hours || 0)),
                         remarks: att.remarks,
                         raw_punches: att.raw_punches ? JSON.parse(att.raw_punches) : [],
                         is_on_time: !isLate && !isEarlyLeave && !!att.check_out
@@ -748,6 +754,9 @@ const checkIn = async (req, res) => {
                 status: 'present',
                 late_minutes: lateMinutes,
                 remarks: lateComment,
+                system_off_minutes: 0,
+                net_working_hours: 0,
+                last_activity_time: new Date(),
                 raw_punches: JSON.stringify(currentPunches.length > 0 ? currentPunches : [nowTime])
             };
             if (savedImage) {
@@ -767,6 +776,9 @@ const checkIn = async (req, res) => {
                 status: 'present',
                 late_minutes: lateMinutes,
                 remarks: lateComment,
+                system_off_minutes: 0,
+                net_working_hours: 0,
+                last_activity_time: new Date(),
                 raw_punches: JSON.stringify([nowTime])
             });
         }
@@ -777,7 +789,9 @@ const checkIn = async (req, res) => {
             data: {
                 ...attendance.toJSON(),
                 check_in_formatted: formatTime12(nowTime),
-                check_in_image: savedImage || attendance.check_in_image || null
+                check_in_image: savedImage || attendance.check_in_image || null,
+                system_off_minutes: 0,
+                net_working_hours: 0
             }
         });
     } catch (error) {
@@ -824,6 +838,14 @@ const checkOut = async (req, res) => {
         const checkOutMoment = moment(checkOutTime, 'HH:mm:ss');
         const workingHours = parseFloat(checkOutMoment.diff(checkInTime, 'hours', true).toFixed(2));
 
+        const systemOffMinutes = req.body.system_off_minutes !== undefined 
+            ? parseInt(req.body.system_off_minutes, 10) 
+            : (attendance.system_off_minutes || 0);
+
+        const grossHours = workingHours > 0 ? workingHours : 0;
+        const offHours = systemOffMinutes / 60;
+        const netWorkingHours = parseFloat(Math.max(0, grossHours - offHours).toFixed(2));
+
         const outSec = timeToSeconds(checkOutTime);
         const officeEndSec = timeToSeconds(OFFICE_END_TIME);
         let earlyLeaveMinutes = 0;
@@ -852,7 +874,10 @@ const checkOut = async (req, res) => {
 
         const updateData = {
             check_out: checkOutTime,
-            working_hours: workingHours > 0 ? workingHours : 0,
+            working_hours: grossHours,
+            system_off_minutes: systemOffMinutes,
+            net_working_hours: netWorkingHours,
+            last_activity_time: new Date(),
             early_leave_minutes: earlyLeaveMinutes,
             remarks: updatedRemarks,
             raw_punches: JSON.stringify(currentPunches)
@@ -869,12 +894,80 @@ const checkOut = async (req, res) => {
             data: {
                 ...attendance.toJSON(),
                 check_out_formatted: formatTime12(checkOutTime),
-                check_out_image: savedImage || attendance.check_out_image || null
+                check_out_image: savedImage || attendance.check_out_image || null,
+                system_off_minutes: systemOffMinutes,
+                net_working_hours: netWorkingHours
             }
         });
     } catch (error) {
         console.error('Check out error:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Sync employee system off / idle time during the workday
+// @route   POST /api/attendance/sync-system-off-time
+// @access  Private
+const syncSystemOffTime = async (req, res) => {
+    try {
+        const employee = await Employee.findOne({
+            where: { user_id: req.user.id }
+        });
+
+        if (!employee) {
+            return res.status(404).json({ success: false, message: 'Employee not found' });
+        }
+
+        const istMoment = moment().utcOffset('+05:30');
+        const today = req.body.date || istMoment.format('YYYY-MM-DD');
+        const systemOffMinutes = parseInt(req.body.system_off_minutes, 10) || 0;
+
+        const attendance = await Attendance.findOne({
+            where: {
+                employee_id: employee.id,
+                date: today
+            }
+        });
+
+        if (!attendance) {
+            return res.status(404).json({ success: false, message: 'No attendance record found for today' });
+        }
+
+        // Only track system off time if employee has checked in
+        if (!attendance.check_in) {
+            return res.status(400).json({ success: false, message: 'Employee has not checked in today' });
+        }
+
+        // Compute current working hours
+        let grossHours = parseFloat(attendance.working_hours) || 0;
+        if (!attendance.check_out && attendance.check_in) {
+            const inTime = moment(attendance.check_in, 'HH:mm:ss');
+            const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
+            grossHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
+        }
+
+        const offHours = systemOffMinutes / 60;
+        const netHours = parseFloat(Math.max(0, grossHours - offHours).toFixed(2));
+
+        await attendance.update({
+            system_off_minutes: systemOffMinutes,
+            net_working_hours: netHours,
+            last_activity_time: new Date()
+        });
+
+        res.json({
+            success: true,
+            message: 'System off time synced successfully',
+            data: {
+                system_off_minutes: systemOffMinutes,
+                net_working_hours: netHours,
+                working_hours: grossHours,
+                last_activity_time: new Date()
+            }
+        });
+    } catch (error) {
+        console.error('Error syncing system off time:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 
@@ -931,6 +1024,17 @@ const getAttendanceStats = async (req, res) => {
             (todayAttendance.check_out ? 'checked-out' : 'checked-in') : 
             'not-checked-in';
 
+        // Calculate live working hours if currently checked in
+        let liveWorkingHours = parseFloat(todayAttendance?.working_hours || 0);
+        if (todayAttendance?.check_in && !todayAttendance?.check_out) {
+            const inTime = moment(todayAttendance.check_in, 'HH:mm:ss');
+            const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
+            liveWorkingHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
+        }
+
+        const currentOffMinutes = todayAttendance?.system_off_minutes || 0;
+        const netLiveHours = parseFloat(Math.max(0, liveWorkingHours - (currentOffMinutes / 60)).toFixed(2));
+
         res.json({
             success: true,
             data: {
@@ -941,6 +1045,12 @@ const getAttendanceStats = async (req, res) => {
                 checkOutImage: todayAttendance?.check_out_image || null,
                 rawCheckIn: todayAttendance?.check_in || null,
                 rawCheckOut: todayAttendance?.check_out || null,
+                systemOffMinutes: currentOffMinutes,
+                netWorkingHours: todayAttendance?.net_working_hours !== null && todayAttendance?.net_working_hours !== undefined 
+                    ? parseFloat(todayAttendance.net_working_hours) 
+                    : netLiveHours,
+                workingHours: liveWorkingHours,
+                lastActivityTime: todayAttendance?.last_activity_time || null,
                 monthlyStats
             }
         });
@@ -1089,6 +1199,8 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
         let weekendCount = 0;
         let holidayCount = 0;
         let totalWorkingHours = 0;
+        let totalSystemOffMinutes = 0;
+        let totalNetWorkingHours = 0;
 
         while (cur.isSameOrBefore(endDate)) {
             const dateStr = cur.format('YYYY-MM-DD');
@@ -1103,7 +1215,14 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
                 const isEarlyLeave = (att.early_leave_minutes || 0) > 0;
                 const isOnTime = !isLate && !isEarlyLeave && !!att.check_out;
                 const wHours = parseFloat(att.working_hours || 0);
+                const offMinutes = att.system_off_minutes || 0;
+                const netHours = parseFloat(att.net_working_hours !== null && att.net_working_hours !== undefined 
+                    ? att.net_working_hours 
+                    : Math.max(0, wHours - (offMinutes / 60)).toFixed(2));
+
                 totalWorkingHours += wHours;
+                totalSystemOffMinutes += offMinutes;
+                totalNetWorkingHours += netHours;
 
                 if (isLate) lateCount++;
                 if (isEarlyLeave) earlyLeaveCount++;
@@ -1147,6 +1266,9 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
                     check_out_image: att.check_out_image || null,
                     working_hours: wHours,
                     working_hours_formatted: `${Math.floor(wHours)}h ${Math.round((wHours % 1) * 60)}m`,
+                    system_off_minutes: offMinutes,
+                    system_off_formatted: formatMinutes(offMinutes),
+                    net_working_hours: netHours,
                     remarks: att.remarks || `${lateComment} | ${earlyLeaveComment}`,
                     raw_punches: att.raw_punches ? JSON.parse(att.raw_punches) : [],
                     is_on_time: isOnTime
@@ -1295,6 +1417,9 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
                 weekendCount,
                 holidayCount,
                 totalWorkingHours: parseFloat(totalWorkingHours.toFixed(2)),
+                totalSystemOffMinutes,
+                totalSystemOffFormatted: formatMinutes(totalSystemOffMinutes),
+                totalNetWorkingHours: parseFloat(totalNetWorkingHours.toFixed(2)),
                 avgWorkingHours
             },
             availableMonths,
@@ -1314,5 +1439,6 @@ module.exports = {
     getEmployeeMonthlyAttendance,
     checkIn,
     checkOut,
+    syncSystemOffTime,
     getAttendanceStats
 };
