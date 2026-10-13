@@ -536,6 +536,34 @@ const getDailyAttendance = async (req, res) => {
                     earlyLeaveComment = 'Missed check-out punch';
                 }
 
+                // Compute live working hours & live system off for employees currently checked in
+                let currentOffMinutes = attRecord.system_off_minutes || 0;
+                let grossHours = parseFloat(attRecord.working_hours || 0);
+                let isLiveOff = false;
+
+                if (attRecord.check_in && !attRecord.check_out) {
+                    const istMoment = moment().utcOffset('+05:30');
+                    if (date === istMoment.format('YYYY-MM-DD')) {
+                        const inTime = moment(attRecord.check_in, 'HH:mm:ss');
+                        const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
+                        grossHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
+                        
+                        if (attRecord.last_activity_time) {
+                            const lastActMoment = moment(attRecord.last_activity_time).utcOffset('+05:30');
+                            const awayMinutes = istMoment.diff(lastActMoment, 'minutes');
+                            if (awayMinutes > 30) {
+                                const extraOff = awayMinutes - 30;
+                                currentOffMinutes = Math.max(currentOffMinutes, (attRecord.system_off_minutes || 0) + extraOff);
+                                isLiveOff = true;
+                            }
+                        }
+                    }
+                }
+
+                const netWorkingHours = attRecord.check_out
+                    ? parseFloat(attRecord.net_working_hours !== null && attRecord.net_working_hours !== undefined ? attRecord.net_working_hours : (attRecord.working_hours || 0))
+                    : parseFloat(Math.max(0, grossHours - (currentOffMinutes / 60)).toFixed(2));
+
                 fullDayList.push({
                     id: attRecord.id,
                     employee_id: emp.id,
@@ -560,11 +588,12 @@ const getDailyAttendance = async (req, res) => {
                     check_out: attRecord.check_out,
                     check_out_formatted: formatTime12(attRecord.check_out),
                     check_out_image: attRecord.check_out_image || null,
-                    working_hours: parseFloat(attRecord.working_hours || 0),
-                    working_hours_formatted: `${Math.floor(attRecord.working_hours || 0)}h ${Math.round(((attRecord.working_hours || 0) % 1) * 60)}m`,
-                    system_off_minutes: attRecord.system_off_minutes || 0,
-                    system_off_formatted: formatMinutes(attRecord.system_off_minutes || 0),
-                    net_working_hours: parseFloat(attRecord.net_working_hours !== null && attRecord.net_working_hours !== undefined ? attRecord.net_working_hours : (attRecord.working_hours || 0)),
+                    working_hours: grossHours,
+                    working_hours_formatted: `${Math.floor(grossHours)}h ${Math.round((grossHours % 1) * 60)}m`,
+                    system_off_minutes: currentOffMinutes,
+                    system_off_formatted: formatMinutes(currentOffMinutes),
+                    net_working_hours: netWorkingHours,
+                    is_live_off: isLiveOff,
                     remarks: attRecord.remarks || `${lateComment} | ${earlyLeaveComment}`,
                     raw_punches: attRecord.raw_punches ? JSON.parse(attRecord.raw_punches) : [],
                     is_on_time: isOnTime
@@ -595,6 +624,10 @@ const getDailyAttendance = async (req, res) => {
                     check_out_formatted: '--:--',
                     working_hours: 0,
                     working_hours_formatted: '0h 0m',
+                    system_off_minutes: 0,
+                    system_off_formatted: '0m',
+                    net_working_hours: 0,
+                    is_live_off: false,
                     remarks: 'Absent (No punch recorded)',
                     raw_punches: [],
                     is_on_time: false
@@ -608,6 +641,31 @@ const getDailyAttendance = async (req, res) => {
                 if (!matchedAttIds.has(att.id)) {
                     const isLate = (att.late_minutes || 0) > 0;
                     const isEarlyLeave = (att.early_leave_minutes || 0) > 0;
+
+                    let currentOffMinutes = att.system_off_minutes || 0;
+                    let grossHours = parseFloat(att.working_hours || 0);
+                    let isLiveOff = false;
+                    if (att.check_in && !att.check_out) {
+                        const istMoment = moment().utcOffset('+05:30');
+                        if (date === istMoment.format('YYYY-MM-DD')) {
+                            const inTime = moment(att.check_in, 'HH:mm:ss');
+                            const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
+                            grossHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
+                            if (att.last_activity_time) {
+                                const lastActMoment = moment(att.last_activity_time).utcOffset('+05:30');
+                                const awayMinutes = istMoment.diff(lastActMoment, 'minutes');
+                                if (awayMinutes > 30) {
+                                    const extraOff = awayMinutes - 30;
+                                    currentOffMinutes = Math.max(currentOffMinutes, (att.system_off_minutes || 0) + extraOff);
+                                    isLiveOff = true;
+                                }
+                            }
+                        }
+                    }
+                    const netWorkingHours = att.check_out
+                        ? parseFloat(att.net_working_hours !== null && att.net_working_hours !== undefined ? att.net_working_hours : (att.working_hours || 0))
+                        : parseFloat(Math.max(0, grossHours - (currentOffMinutes / 60)).toFixed(2));
+
                     fullDayList.push({
                         id: att.id,
                         employee_id: att.employee_id,
@@ -632,11 +690,12 @@ const getDailyAttendance = async (req, res) => {
                         check_out: att.check_out,
                         check_out_formatted: formatTime12(att.check_out),
                         check_out_image: att.check_out_image || null,
-                        working_hours: parseFloat(att.working_hours || 0),
-                        working_hours_formatted: `${Math.floor(att.working_hours || 0)}h ${Math.round(((att.working_hours || 0) % 1) * 60)}m`,
-                        system_off_minutes: att.system_off_minutes || 0,
-                        system_off_formatted: formatMinutes(att.system_off_minutes || 0),
-                        net_working_hours: parseFloat(att.net_working_hours !== null && att.net_working_hours !== undefined ? att.net_working_hours : (att.working_hours || 0)),
+                        working_hours: grossHours,
+                        working_hours_formatted: `${Math.floor(grossHours)}h ${Math.round(((grossHours % 1) * 60))}m`,
+                        system_off_minutes: currentOffMinutes,
+                        system_off_formatted: formatMinutes(currentOffMinutes),
+                        net_working_hours: netWorkingHours,
+                        is_live_off: isLiveOff,
                         remarks: att.remarks,
                         raw_punches: att.raw_punches ? JSON.parse(att.raw_punches) : [],
                         is_on_time: !isLate && !isEarlyLeave && !!att.check_out
@@ -652,6 +711,7 @@ const getDailyAttendance = async (req, res) => {
         const lateCount = fullDayList.filter(r => r.is_late).length;
         const earlyLeaveCount = fullDayList.filter(r => r.is_early_leave).length;
         const onTimeCount = fullDayList.filter(r => r.is_on_time).length;
+        const systemOffCount = fullDayList.filter(r => r.is_present && (r.system_off_minutes || 0) > 0).length;
 
         // 6. Filtering & Searching
         let filteredList = fullDayList;
@@ -661,6 +721,7 @@ const getDailyAttendance = async (req, res) => {
             else if (status === 'late') filteredList = filteredList.filter(r => r.is_late);
             else if (status === 'early_leave') filteredList = filteredList.filter(r => r.is_early_leave);
             else if (status === 'on_time') filteredList = filteredList.filter(r => r.is_on_time);
+            else if (status === 'system_off') filteredList = filteredList.filter(r => r.is_present && (r.system_off_minutes || 0) > 0);
         }
 
         if (search && search.trim()) {
@@ -694,7 +755,8 @@ const getDailyAttendance = async (req, res) => {
                 absentCount,
                 lateCount,
                 earlyLeaveCount,
-                onTimeCount
+                onTimeCount,
+                systemOffCount
             },
             availableDates,
             data: filteredList
@@ -1494,6 +1556,7 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
             else if (status === 'late') filteredDays = filteredDays.filter(d => d.is_late);
             else if (status === 'early_leave') filteredDays = filteredDays.filter(d => d.is_early_leave);
             else if (status === 'on_time') filteredDays = filteredDays.filter(d => d.is_on_time);
+            else if (status === 'system_off') filteredDays = filteredDays.filter(d => d.is_present && (d.system_off_minutes || 0) > 0);
             else if (status === 'weekend') filteredDays = filteredDays.filter(d => d.isWeekend);
             else if (status === 'holiday') filteredDays = filteredDays.filter(d => d.isHoliday);
         }
