@@ -11,7 +11,9 @@ const {
     checkOut,
     syncSystemOffTime,
     recordHeartbeat,
-    getAttendanceStats
+    getAttendanceStats,
+    saveManualAttendance,
+    deleteManualAttendance
 } = require('../controllers/attendanceController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -60,5 +62,19 @@ router.post('/check-out', protect, checkOut);
 router.post('/sync-system-off-time', protect, syncSystemOffTime);
 router.post('/heartbeat', protect, recordHeartbeat);
 router.get('/stats', protect, getAttendanceStats);
+
+// Admin / HR / Manager Manual Attendance Management
+router.post(
+    '/manual-entry', 
+    protect, 
+    authorize('admin', 'hr', 'manager'), 
+    saveManualAttendance
+);
+router.delete(
+    '/manual/:id', 
+    protect, 
+    authorize('admin', 'hr', 'manager'), 
+    deleteManualAttendance
+);
 
 module.exports = router;

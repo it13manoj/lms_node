@@ -1615,6 +1615,187 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
     }
 };
 
+// @desc    Manually record or update employee attendance for any date
+// @route   POST /api/attendance/manual-entry
+// @access  Private (Admin, HR, Manager)
+const saveManualAttendance = async (req, res) => {
+    try {
+        const {
+            employee_id,
+            date,
+            check_in,
+            check_out,
+            status,
+            system_off_minutes,
+            remarks
+        } = req.body;
+
+        if (!employee_id) {
+            return res.status(400).json({ success: false, message: 'Please select an employee' });
+        }
+
+        if (!date) {
+            return res.status(400).json({ success: false, message: 'Please select a date' });
+        }
+
+        // Validate date format YYYY-MM-DD
+        if (!moment(date, 'YYYY-MM-DD', true).isValid()) {
+            return res.status(400).json({ success: false, message: 'Invalid date format. Expected YYYY-MM-DD' });
+        }
+
+        let employee = await Employee.findByPk(employee_id);
+        if (!employee) {
+            employee = await Employee.findOne({ where: { employee_id: employee_id } });
+        }
+        if (!employee) {
+            return res.status(404).json({ success: false, message: 'Employee not found' });
+        }
+
+        const normalizeTime = (t) => {
+            if (!t || typeof t !== 'string' || t.trim() === '' || t === '--:--') return null;
+            const s = t.trim();
+            if (/^\d{1,2}:\d{2}$/.test(s)) {
+                const parts = s.split(':');
+                return `${parts[0].padStart(2, '0')}:${parts[1]}:00`;
+            }
+            if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) {
+                const parts = s.split(':');
+                return `${parts[0].padStart(2, '0')}:${parts[1]}:${parts[2]}`;
+            }
+            return s;
+        };
+
+        const checkInTime = normalizeTime(check_in);
+        const checkOutTime = normalizeTime(check_out);
+
+        const officeStartSec = timeToSeconds(OFFICE_START_TIME); // 09:30:00 = 34200
+        const officeEndSec = timeToSeconds(OFFICE_END_TIME);     // 18:30:00 = 66600
+
+        let lateMinutes = 0;
+        let lateComment = '';
+        let earlyLeaveMinutes = 0;
+        let earlyLeaveComment = '';
+        let workingHours = 0;
+
+        if (checkInTime) {
+            const inSec = timeToSeconds(checkInTime);
+            if (inSec > officeStartSec) {
+                lateMinutes = Math.floor((inSec - officeStartSec) / 60);
+                lateComment = `Late by ${formatMinutes(lateMinutes)} (In: ${formatTime12(checkInTime)})`;
+            } else {
+                lateComment = `On Time (In: ${formatTime12(checkInTime)})`;
+            }
+        }
+
+        if (checkOutTime) {
+            const outSec = timeToSeconds(checkOutTime);
+            if (outSec < officeEndSec) {
+                earlyLeaveMinutes = Math.floor((officeEndSec - outSec) / 60);
+                earlyLeaveComment = `Left early by ${formatMinutes(earlyLeaveMinutes)} (Out: ${formatTime12(checkOutTime)})`;
+            } else {
+                earlyLeaveComment = `Completed full day (Out: ${formatTime12(checkOutTime)})`;
+            }
+
+            if (checkInTime) {
+                const inSec = timeToSeconds(checkInTime);
+                workingHours = parseFloat(Math.max(0, (outSec - inSec) / 3600).toFixed(2));
+            }
+        } else if (checkInTime) {
+            earlyLeaveComment = 'No check-out recorded';
+        }
+
+        const offMins = parseInt(system_off_minutes, 10) || 0;
+        const netWorkingHours = parseFloat(Math.max(0, workingHours - (offMins / 60)).toFixed(2));
+
+        // Determine final status
+        let finalStatus = status;
+        if (!finalStatus) {
+            if (!checkInTime && !checkOutTime) {
+                finalStatus = 'absent';
+            } else if (workingHours > 0 && workingHours < 4.5) {
+                finalStatus = 'half-day';
+            } else if (lateMinutes > 0) {
+                finalStatus = 'late';
+            } else {
+                finalStatus = 'present';
+            }
+        }
+
+        // Format remarks
+        const customNote = remarks ? remarks.trim() : 'Manual Entry by Admin';
+        const timingNote = checkInTime
+            ? `${lateComment} | ${earlyLeaveComment || 'Punched'}`
+            : 'Marked Absent';
+        const finalRemarks = `${timingNote} • ${customNote}`;
+
+        // Raw punches array
+        const punches = [];
+        if (checkInTime) punches.push(checkInTime);
+        if (checkOutTime && checkOutTime !== checkInTime) punches.push(checkOutTime);
+
+        const employeeFullName = `${employee.first_name || ''} ${employee.last_name || ''}`.trim() || 'Employee';
+        const jobNo = employee.employee_id || employee.job_no || '';
+
+        // Check if attendance already exists for this employee and date
+        let attendance = await Attendance.findOne({
+            where: {
+                employee_id: employee.id,
+                date: date
+            }
+        });
+
+        const updateData = {
+            employee_id: employee.id,
+            job_no: jobNo,
+            employee_name: employeeFullName,
+            date: date,
+            check_in: checkInTime,
+            check_out: checkOutTime,
+            status: finalStatus,
+            late_minutes: lateMinutes,
+            early_leave_minutes: earlyLeaveMinutes,
+            working_hours: workingHours,
+            system_off_minutes: offMins,
+            net_working_hours: netWorkingHours,
+            remarks: finalRemarks,
+            raw_punches: JSON.stringify(punches),
+            last_activity_time: new Date()
+        };
+
+        if (attendance) {
+            await attendance.update(updateData);
+        } else {
+            attendance = await Attendance.create(updateData);
+        }
+
+        res.json({
+            success: true,
+            message: `Attendance ${attendance ? 'updated' : 'recorded'} successfully for ${employeeFullName} on ${date}`,
+            data: attendance
+        });
+    } catch (error) {
+        console.error('Manual attendance entry error:', error);
+        res.status(500).json({ success: false, message: 'Server error saving manual attendance', error: error.message });
+    }
+};
+
+// @desc    Delete manual attendance record
+// @route   DELETE /api/attendance/manual/:id
+// @access  Private (Admin, HR, Manager)
+const deleteManualAttendance = async (req, res) => {
+    try {
+        const attendance = await Attendance.findByPk(req.params.id);
+        if (!attendance) {
+            return res.status(404).json({ success: false, message: 'Attendance record not found' });
+        }
+        await attendance.destroy();
+        res.json({ success: true, message: 'Attendance record deleted successfully' });
+    } catch (error) {
+        console.error('Delete manual attendance error:', error);
+        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
     uploadAttendanceCSV,
     getDailyAttendance,
@@ -1624,5 +1805,7 @@ module.exports = {
     checkOut,
     syncSystemOffTime,
     recordHeartbeat,
-    getAttendanceStats
+    getAttendanceStats,
+    saveManualAttendance,
+    deleteManualAttendance
 };
