@@ -87,6 +87,10 @@ const Letter = sequelize.define('Letter', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    body_content: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     include_signature: {
         type: DataTypes.BOOLEAN,
         defaultValue: false

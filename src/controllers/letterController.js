@@ -355,6 +355,7 @@ const createLetter = async (req, res) => {
             signatory_name = 'Authorized Signatory',
             signatory_title = 'For ParakshTech LLP',
             custom_terms,
+            body_content,
             status = 'issued',
             include_signature = false,
             include_stamp = false,
@@ -422,6 +423,7 @@ const createLetter = async (req, res) => {
             signatory_name,
             signatory_title,
             custom_terms: custom_terms || null,
+            body_content: body_content || null,
             status,
             include_signature: finalIncludeSignature,
             include_stamp: finalIncludeStamp,
@@ -493,7 +495,7 @@ const updateLetter = async (req, res) => {
             'candidate_name', 'candidate_email', 'candidate_phone', 'candidate_address',
             'position', 'department', 'joining_date', 'end_date', 'annual_ctc',
             'work_location', 'issue_date', 'signatory_name', 'signatory_title',
-            'custom_terms', 'status', 'employee_id', 'include_signature', 'include_stamp'
+            'custom_terms', 'body_content', 'status', 'employee_id', 'include_signature', 'include_stamp'
         ];
 
         allowedFields.forEach(field => {

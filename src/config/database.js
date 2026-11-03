@@ -67,6 +67,11 @@ const ensureLetterSecurityColumns = async () => {
             await sequelize.query("ALTER TABLE letters ADD COLUMN include_stamp TINYINT(1) DEFAULT 0");
             console.log("✅ Added include_stamp column to letters table");
         }
+        const [bodyCol] = await sequelize.query("SHOW COLUMNS FROM letters LIKE 'body_content'");
+        if (!bodyCol || bodyCol.length === 0) {
+            await sequelize.query("ALTER TABLE letters ADD COLUMN body_content LONGTEXT NULL");
+            console.log("✅ Added body_content column to letters table");
+        }
         await sequelize.query(`
             CREATE TABLE IF NOT EXISTS letter_settings (
                 id INT AUTO_INCREMENT PRIMARY KEY,
