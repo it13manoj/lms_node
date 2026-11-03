@@ -3,6 +3,10 @@ const router = express.Router();
 const {
     getLetters,
     getLetterById,
+    getPinStatus,
+    configurePin,
+    verifyPin,
+    authorizeLetterSignature,
     createLetter,
     updateLetter,
     deleteLetter
@@ -13,9 +17,16 @@ const { protect, authorize } = require('../middleware/auth');
 router.use(protect);
 router.use(authorize('admin'));
 
+// Security PIN settings endpoints (must precede /:id)
+router.get('/settings/pin-status', getPinStatus);
+router.post('/settings/configure-pin', configurePin);
+router.post('/settings/verify-pin', verifyPin);
+
 router.route('/')
     .get(getLetters)
     .post(createLetter);
+
+router.post('/:id/authorize-signature', authorizeLetterSignature);
 
 router.route('/:id')
     .get(getLetterById)
@@ -23,4 +34,3 @@ router.route('/:id')
     .delete(deleteLetter);
 
 module.exports = router;
-

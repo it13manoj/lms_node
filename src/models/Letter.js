@@ -87,6 +87,14 @@ const Letter = sequelize.define('Letter', {
         type: DataTypes.TEXT,
         allowNull: true
     },
+    include_signature: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    include_stamp: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
     status: {
         type: DataTypes.ENUM('issued', 'draft'),
         defaultValue: 'issued'

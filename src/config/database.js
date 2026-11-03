@@ -18,7 +18,6 @@ const sequelize = new Sequelize(
         define: {
             timestamps: true,
             underscored: true,
-            // Prevent automatic index creation
             indexes: []
         }
     }
@@ -56,6 +55,32 @@ const ensureAttendanceColumns = async () => {
     }
 };
 
+const ensureLetterSecurityColumns = async () => {
+    try {
+        const [sigCol] = await sequelize.query("SHOW COLUMNS FROM letters LIKE 'include_signature'");
+        if (!sigCol || sigCol.length === 0) {
+            await sequelize.query("ALTER TABLE letters ADD COLUMN include_signature TINYINT(1) DEFAULT 0");
+            console.log("✅ Added include_signature column to letters table");
+        }
+        const [stampCol] = await sequelize.query("SHOW COLUMNS FROM letters LIKE 'include_stamp'");
+        if (!stampCol || stampCol.length === 0) {
+            await sequelize.query("ALTER TABLE letters ADD COLUMN include_stamp TINYINT(1) DEFAULT 0");
+            console.log("✅ Added include_stamp column to letters table");
+        }
+        await sequelize.query(`
+            CREATE TABLE IF NOT EXISTS letter_settings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                setting_key VARCHAR(100) NOT NULL UNIQUE,
+                setting_value TEXT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+    } catch (err) {
+        console.warn("⚠️ Letter columns/settings check notice:", err.message);
+    }
+};
+
 const connectDB = async () => {
     try {
         await sequelize.authenticate();
@@ -65,6 +90,7 @@ const connectDB = async () => {
         console.log('✅ Database synced');
 
         await ensureAttendanceColumns();
+        await ensureLetterSecurityColumns();
     } catch (error) {
         console.error('❌ Unable to connect to database:', error);
         process.exit(1);

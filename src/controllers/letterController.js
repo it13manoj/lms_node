@@ -1,5 +1,7 @@
 const Letter = require('../models/Letter');
+const LetterSetting = require('../models/LetterSetting');
 const Employee = require('../models/Employee');
+const bcrypt = require('bcryptjs');
 const { Op } = require('sequelize');
 
 /**
@@ -132,6 +134,205 @@ const getLetterById = async (req, res) => {
     }
 };
 
+// @desc    Get status of letter security PIN (whether it is configured)
+// @route   GET /api/letters/settings/pin-status
+// @access  Private (Admin only)
+const getPinStatus = async (req, res) => {
+    try {
+        const pinSetting = await LetterSetting.findOne({
+            where: { setting_key: 'signature_pin' }
+        });
+
+        res.json({
+            success: true,
+            data: {
+                isConfigured: Boolean(pinSetting && pinSetting.setting_value)
+            }
+        });
+    } catch (error) {
+        console.error('Error checking PIN status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to check security PIN status',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Configure or change security PIN for digital signature & stamp
+// @route   POST /api/letters/settings/configure-pin
+// @access  Private (Admin only)
+const configurePin = async (req, res) => {
+    try {
+        const { currentPin, newPin } = req.body;
+
+        if (!newPin || typeof newPin !== 'string' || newPin.trim().length < 4 || newPin.trim().length > 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Security PIN must be between 4 and 8 digits'
+            });
+        }
+
+        const pinSetting = await LetterSetting.findOne({
+            where: { setting_key: 'signature_pin' }
+        });
+
+        // If a PIN is already configured, current PIN must be verified
+        if (pinSetting && pinSetting.setting_value) {
+            if (!currentPin) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Current Security PIN is required to change your PIN'
+                });
+            }
+
+            const isCurrentValid = await bcrypt.compare(String(currentPin).trim(), pinSetting.setting_value);
+            if (!isCurrentValid) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Current Security PIN is incorrect'
+                });
+            }
+        }
+
+        const hashedPin = await bcrypt.hash(newPin.trim(), 10);
+
+        if (pinSetting) {
+            pinSetting.setting_value = hashedPin;
+            await pinSetting.save();
+        } else {
+            await LetterSetting.create({
+                setting_key: 'signature_pin',
+                setting_value: hashedPin
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Security PIN configured successfully'
+        });
+    } catch (error) {
+        console.error('Error configuring PIN:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to configure security PIN',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Verify security PIN
+// @route   POST /api/letters/settings/verify-pin
+// @access  Private (Admin only)
+const verifyPin = async (req, res) => {
+    try {
+        const { pin } = req.body;
+        if (!pin) {
+            return res.status(400).json({
+                success: false,
+                message: 'PIN is required'
+            });
+        }
+
+        const pinSetting = await LetterSetting.findOne({
+            where: { setting_key: 'signature_pin' }
+        });
+
+        if (!pinSetting || !pinSetting.setting_value) {
+            return res.status(400).json({
+                success: false,
+                message: 'Security PIN is not configured yet. Please configure it first.'
+            });
+        }
+
+        const isMatch = await bcrypt.compare(String(pin).trim(), pinSetting.setting_value);
+        if (!isMatch) {
+            return res.status(403).json({
+                success: false,
+                message: 'Invalid Security PIN'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Security PIN verified successfully'
+        });
+    } catch (error) {
+        console.error('Error verifying PIN:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to verify security PIN',
+            error: error.message
+        });
+    }
+};
+
+// @desc    Authorize or revoke digital signature & stamp on existing letter
+// @route   POST /api/letters/:id/authorize-signature
+// @access  Private (Admin only)
+const authorizeLetterSignature = async (req, res) => {
+    try {
+        const { security_pin, enable = true } = req.body;
+        const letter = await Letter.findByPk(req.params.id);
+
+        if (!letter) {
+            return res.status(404).json({
+                success: false,
+                message: 'Letter not found'
+            });
+        }
+
+        if (enable) {
+            const pinSetting = await LetterSetting.findOne({
+                where: { setting_key: 'signature_pin' }
+            });
+
+            if (!pinSetting || !pinSetting.setting_value) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Security PIN is not configured yet. Please configure the Security PIN first.'
+                });
+            }
+
+            if (!security_pin) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Security PIN is required to authorize official stamp and signature'
+                });
+            }
+
+            const isMatch = await bcrypt.compare(String(security_pin).trim(), pinSetting.setting_value);
+            if (!isMatch) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Invalid Security PIN. Authorization denied.'
+                });
+            }
+
+            letter.include_signature = true;
+            letter.include_stamp = true;
+        } else {
+            letter.include_signature = false;
+            letter.include_stamp = false;
+        }
+
+        await letter.save();
+
+        res.json({
+            success: true,
+            message: enable ? 'Official stamp and signature authorized successfully' : 'Stamp and signature revoked',
+            data: letter
+        });
+    } catch (error) {
+        console.error('Error authorizing letter signature:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update signature authorization',
+            error: error.message
+        });
+    }
+};
+
 // @desc    Create dynamic letter (Offer, Joining, or Experience)
 // @route   POST /api/letters
 // @access  Private (Admin only)
@@ -154,7 +355,10 @@ const createLetter = async (req, res) => {
             signatory_name = 'Authorized Signatory',
             signatory_title = 'For ParakshTech LLP',
             custom_terms,
-            status = 'issued'
+            status = 'issued',
+            include_signature = false,
+            include_stamp = false,
+            security_pin
         } = req.body;
 
         if (!candidate_name || !position || !joining_date) {
@@ -162,6 +366,40 @@ const createLetter = async (req, res) => {
                 success: false,
                 message: 'Candidate name, position, and joining date are required'
             });
+        }
+
+        let finalIncludeSignature = false;
+        let finalIncludeStamp = false;
+
+        if (include_signature || include_stamp) {
+            const pinSetting = await LetterSetting.findOne({
+                where: { setting_key: 'signature_pin' }
+            });
+
+            if (!pinSetting || !pinSetting.setting_value) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Security PIN has not been configured yet. Please configure the Security PIN first to attach digital stamp and signature.'
+                });
+            }
+
+            if (!security_pin) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Security PIN is required to attach official stamp and signature'
+                });
+            }
+
+            const isValidPin = await bcrypt.compare(String(security_pin).trim(), pinSetting.setting_value);
+            if (!isValidPin) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Invalid Security PIN. Official stamp and signature cannot be attached.'
+                });
+            }
+
+            finalIncludeSignature = Boolean(include_signature);
+            finalIncludeStamp = Boolean(include_stamp);
         }
 
         const reference_no = await generateReferenceNo(letter_type);
@@ -185,6 +423,8 @@ const createLetter = async (req, res) => {
             signatory_title,
             custom_terms: custom_terms || null,
             status,
+            include_signature: finalIncludeSignature,
+            include_stamp: finalIncludeStamp,
             created_by: req.user?.id || null
         });
 
@@ -216,11 +456,44 @@ const updateLetter = async (req, res) => {
             });
         }
 
+        const wantSignature = req.body.include_signature !== undefined ? Boolean(req.body.include_signature) : letter.include_signature;
+        const wantStamp = req.body.include_stamp !== undefined ? Boolean(req.body.include_stamp) : letter.include_stamp;
+
+        // If newly enabling signature/stamp or explicitly providing security_pin
+        const isEnabling = (wantSignature && !letter.include_signature) || (wantStamp && !letter.include_stamp);
+        if (isEnabling || (req.body.security_pin && (wantSignature || wantStamp))) {
+            const pinSetting = await LetterSetting.findOne({
+                where: { setting_key: 'signature_pin' }
+            });
+
+            if (!pinSetting || !pinSetting.setting_value) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Security PIN has not been configured yet. Please configure the Security PIN first.'
+                });
+            }
+
+            if (!req.body.security_pin) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Security PIN is required to authorize official stamp and signature'
+                });
+            }
+
+            const isValidPin = await bcrypt.compare(String(req.body.security_pin).trim(), pinSetting.setting_value);
+            if (!isValidPin) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Invalid Security PIN. Official stamp and signature cannot be updated.'
+                });
+            }
+        }
+
         const allowedFields = [
             'candidate_name', 'candidate_email', 'candidate_phone', 'candidate_address',
             'position', 'department', 'joining_date', 'end_date', 'annual_ctc',
             'work_location', 'issue_date', 'signatory_name', 'signatory_title',
-            'custom_terms', 'status', 'employee_id'
+            'custom_terms', 'status', 'employee_id', 'include_signature', 'include_stamp'
         ];
 
         allowedFields.forEach(field => {
@@ -278,8 +551,11 @@ const deleteLetter = async (req, res) => {
 module.exports = {
     getLetters,
     getLetterById,
+    getPinStatus,
+    configurePin,
+    verifyPin,
+    authorizeLetterSignature,
     createLetter,
     updateLetter,
     deleteLetter
 };
-
