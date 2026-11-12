@@ -86,6 +86,38 @@ const ensureLetterSecurityColumns = async () => {
     }
 };
 
+const ensureScreenshotTable = async () => {
+    try {
+        await sequelize.query(`
+            CREATE TABLE IF NOT EXISTS screenshots (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                employee_id INT NULL,
+                user_id INT NOT NULL,
+                employee_name VARCHAR(120) NULL,
+                job_no VARCHAR(50) NULL,
+                date DATE NOT NULL,
+                capture_time TIME NOT NULL,
+                captured_at DATETIME NOT NULL,
+                image_path VARCHAR(255) NOT NULL,
+                file_size_kb INT DEFAULT 0,
+                status ENUM('pending', 'verified', 'rejected') DEFAULT 'pending',
+                verified_by INT NULL,
+                verified_by_name VARCHAR(120) NULL,
+                verified_at DATETIME NULL,
+                notes VARCHAR(255) NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_screenshots_date (date),
+                INDEX idx_screenshots_user (user_id),
+                INDEX idx_screenshots_employee (employee_id),
+                INDEX idx_screenshots_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+    } catch (err) {
+        console.warn("Screenshot table check notice:", err.message);
+    }
+};
+
 const connectDB = async () => {
     try {
         await sequelize.authenticate();
@@ -96,6 +128,7 @@ const connectDB = async () => {
 
         await ensureAttendanceColumns();
         await ensureLetterSecurityColumns();
+        await ensureScreenshotTable();
     } catch (error) {
         console.error('❌ Unable to connect to database:', error);
         process.exit(1);
