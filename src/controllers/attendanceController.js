@@ -45,6 +45,101 @@ const savePunchImage = (base64Data, employeeId, type = 'in') => {
 // Standard Office Timing constants
 const OFFICE_START_TIME = '09:30:00'; // 9:30 AM
 const OFFICE_END_TIME = '18:30:00';   // 6:30 PM
+const IST_OFFSET = '+05:30';
+const IDLE_THRESHOLD_MINUTES = 30;
+
+// Helper: Parse date ('YYYY-MM-DD') and time ('HH:mm:ss' or 'HH:mm') strictly in IST (+05:30)
+const parseISTDateTime = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return null;
+    let cleanTime = String(timeStr).trim();
+    if (cleanTime.length === 5) cleanTime = cleanTime + ':00';
+    const m = moment(dateStr + ' ' + cleanTime + ' ' + IST_OFFSET, 'YYYY-MM-DD HH:mm:ss Z');
+    return m.isValid() ? m.utcOffset(IST_OFFSET) : null;
+};
+
+// Helper: Compute 09:30 AM - 06:30 PM IST tracking bounds and maximum possible system off minutes
+const getShiftTrackingBounds = (dateStr, checkInTime, endMoment) => {
+    const shiftStart = parseISTDateTime(dateStr, OFFICE_START_TIME);
+    const shiftEnd = parseISTDateTime(dateStr, OFFICE_END_TIME);
+    const checkInMoment = parseISTDateTime(dateStr, checkInTime);
+    if (!shiftStart || !shiftEnd || !checkInMoment || !endMoment) {
+        return null;
+    }
+    const effectiveStartMs = Math.max(shiftStart.valueOf(), checkInMoment.valueOf());
+    const effectiveEndMs = Math.min(shiftEnd.valueOf(), endMoment.valueOf());
+    const shiftWindowMinutes = Math.max(0, Math.floor((effectiveEndMs - effectiveStartMs) / 60000));
+    const maxPossibleOffMinutes = Math.max(0, shiftWindowMinutes - IDLE_THRESHOLD_MINUTES);
+    return {
+        shiftStart,
+        shiftEnd,
+        checkInMoment,
+        effectiveStartMs,
+        effectiveEndMs,
+        shiftWindowMinutes,
+        maxPossibleOffMinutes
+    };
+};
+
+// Helper: Calculate gross hours, shift-window-clamped system off minutes (09:30 AM - 06:30 PM IST), and net working hours
+const calculateShiftAttendanceMetrics = (attRecord, istNow = moment().utcOffset(IST_OFFSET)) => {
+    const dateStr = attRecord.date;
+    const todayIST = istNow.format('YYYY-MM-DD');
+    const checkInMoment = attRecord.check_in ? parseISTDateTime(dateStr, attRecord.check_in) : null;
+    const checkOutMoment = attRecord.check_out ? parseISTDateTime(dateStr, attRecord.check_out) : null;
+
+    if (!checkInMoment) {
+        return {
+            grossHours: parseFloat(attRecord.working_hours || 0) || 0,
+            systemOffMinutes: 0,
+            netWorkingHours: parseFloat(attRecord.net_working_hours || attRecord.working_hours || 0) || 0,
+            isLiveOff: false
+        };
+    }
+
+    const shiftEnd = parseISTDateTime(dateStr, OFFICE_END_TIME);
+    const liveEnd = checkOutMoment
+        ? checkOutMoment
+        : (dateStr === todayIST ? istNow : shiftEnd);
+
+    const grossHours = checkOutMoment
+        ? parseFloat(Math.max(0, checkOutMoment.diff(checkInMoment, 'hours', true)).toFixed(2))
+        : parseFloat(Math.max(0, liveEnd.diff(checkInMoment, 'hours', true)).toFixed(2));
+
+    const bounds = getShiftTrackingBounds(dateStr, attRecord.check_in, liveEnd);
+    const maxPossibleOff = bounds ? bounds.maxPossibleOffMinutes : 0;
+
+    let currentOffMinutes = Math.min(
+        Math.max(0, parseInt(attRecord.system_off_minutes, 10) || 0),
+        maxPossibleOff
+    );
+    let isLiveOff = false;
+
+    if (!checkOutMoment && attRecord.last_activity_time && bounds && bounds.effectiveEndMs > bounds.effectiveStartMs) {
+        const lastActMs = moment(attRecord.last_activity_time).valueOf();
+        if (!isNaN(lastActMs)) {
+            const clampedStartMs = Math.max(lastActMs, bounds.effectiveStartMs);
+            if (bounds.effectiveEndMs > clampedStartMs) {
+                const awayMinutesInWindow = Math.floor((bounds.effectiveEndMs - clampedStartMs) / 60000);
+                if (awayMinutesInWindow > IDLE_THRESHOLD_MINUTES) {
+                    const extraOff = awayMinutesInWindow - IDLE_THRESHOLD_MINUTES;
+                    currentOffMinutes = Math.min(maxPossibleOff, currentOffMinutes + extraOff);
+                    if (dateStr === todayIST && istNow.valueOf() <= bounds.shiftEnd.valueOf()) {
+                        isLiveOff = true;
+                    }
+                }
+            }
+        }
+    }
+
+    const netWorkingHours = parseFloat(Math.max(0, grossHours - (currentOffMinutes / 60)).toFixed(2));
+
+    return {
+        grossHours,
+        systemOffMinutes: currentOffMinutes,
+        netWorkingHours,
+        isLiveOff
+    };
+};
 
 // Helper: Convert time string 'HH:mm:ss' to seconds since midnight
 const timeToSeconds = (timeStr) => {
@@ -536,33 +631,13 @@ const getDailyAttendance = async (req, res) => {
                     earlyLeaveComment = 'Missed check-out punch';
                 }
 
-                // Compute live working hours & live system off for employees currently checked in
-                let currentOffMinutes = attRecord.system_off_minutes || 0;
-                let grossHours = parseFloat(attRecord.working_hours || 0);
-                let isLiveOff = false;
-
-                if (attRecord.check_in && !attRecord.check_out) {
-                    const istMoment = moment().utcOffset('+05:30');
-                    if (date === istMoment.format('YYYY-MM-DD')) {
-                        const inTime = moment(attRecord.check_in, 'HH:mm:ss');
-                        const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
-                        grossHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
-                        
-                        if (attRecord.last_activity_time) {
-                            const lastActMoment = moment(attRecord.last_activity_time).utcOffset('+05:30');
-                            const awayMinutes = istMoment.diff(lastActMoment, 'minutes');
-                            if (awayMinutes > 30) {
-                                const extraOff = awayMinutes - 30;
-                                currentOffMinutes = Math.max(currentOffMinutes, (attRecord.system_off_minutes || 0) + extraOff);
-                                isLiveOff = true;
-                            }
-                        }
-                    }
-                }
-
-                const netWorkingHours = attRecord.check_out
-                    ? parseFloat(attRecord.net_working_hours !== null && attRecord.net_working_hours !== undefined ? attRecord.net_working_hours : (attRecord.working_hours || 0))
-                    : parseFloat(Math.max(0, grossHours - (currentOffMinutes / 60)).toFixed(2));
+                const istMoment = moment().utcOffset(IST_OFFSET);
+                const {
+                    grossHours,
+                    systemOffMinutes: currentOffMinutes,
+                    netWorkingHours,
+                    isLiveOff
+                } = calculateShiftAttendanceMetrics(attRecord, istMoment);
 
                 fullDayList.push({
                     id: attRecord.id,
@@ -642,29 +717,13 @@ const getDailyAttendance = async (req, res) => {
                     const isLate = (att.late_minutes || 0) > 0;
                     const isEarlyLeave = (att.early_leave_minutes || 0) > 0;
 
-                    let currentOffMinutes = att.system_off_minutes || 0;
-                    let grossHours = parseFloat(att.working_hours || 0);
-                    let isLiveOff = false;
-                    if (att.check_in && !att.check_out) {
-                        const istMoment = moment().utcOffset('+05:30');
-                        if (date === istMoment.format('YYYY-MM-DD')) {
-                            const inTime = moment(att.check_in, 'HH:mm:ss');
-                            const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
-                            grossHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
-                            if (att.last_activity_time) {
-                                const lastActMoment = moment(att.last_activity_time).utcOffset('+05:30');
-                                const awayMinutes = istMoment.diff(lastActMoment, 'minutes');
-                                if (awayMinutes > 30) {
-                                    const extraOff = awayMinutes - 30;
-                                    currentOffMinutes = Math.max(currentOffMinutes, (att.system_off_minutes || 0) + extraOff);
-                                    isLiveOff = true;
-                                }
-                            }
-                        }
-                    }
-                    const netWorkingHours = att.check_out
-                        ? parseFloat(att.net_working_hours !== null && att.net_working_hours !== undefined ? att.net_working_hours : (att.working_hours || 0))
-                        : parseFloat(Math.max(0, grossHours - (currentOffMinutes / 60)).toFixed(2));
+                    const istMoment = moment().utcOffset(IST_OFFSET);
+                    const {
+                        grossHours,
+                        systemOffMinutes: currentOffMinutes,
+                        netWorkingHours,
+                        isLiveOff
+                    } = calculateShiftAttendanceMetrics(att, istMoment);
 
                     fullDayList.push({
                         id: att.id,
@@ -942,22 +1001,35 @@ const checkOut = async (req, res) => {
             return res.status(400).json({ message: 'Already checked out' });
         }
 
-        const checkInTime = moment(attendance.check_in, 'HH:mm:ss');
-        const checkOutMoment = moment(checkOutTime, 'HH:mm:ss');
-        const workingHours = parseFloat(checkOutMoment.diff(checkInTime, 'hours', true).toFixed(2));
+        const checkInMoment = parseISTDateTime(attendance.date, attendance.check_in);
+        const checkOutMoment = parseISTDateTime(attendance.date, checkOutTime);
+        const workingHours = (checkInMoment && checkOutMoment)
+            ? parseFloat(Math.max(0, checkOutMoment.diff(checkInMoment, 'hours', true)).toFixed(2))
+            : 0;
 
-        let systemOffMinutes = req.body.system_off_minutes !== undefined 
-            ? parseInt(req.body.system_off_minutes, 10) 
-            : (attendance.system_off_minutes || 0);
+        const bounds = (checkInMoment && checkOutMoment)
+            ? getShiftTrackingBounds(attendance.date, attendance.check_in, checkOutMoment)
+            : null;
+        const maxPossibleOff = bounds ? bounds.maxPossibleOffMinutes : 0;
 
-        // Account for any gap when system/app was closed or inactive before punch out
-        if (attendance.last_activity_time) {
-            const lastActMoment = moment(attendance.last_activity_time).utcOffset('+05:30');
-            const checkOutFullMoment = moment(`${attendance.date} ${checkOutTime}`, 'YYYY-MM-DD HH:mm:ss');
-            const gapMinutes = checkOutFullMoment.diff(lastActMoment, 'minutes');
-            if (gapMinutes > 30) {
-                const unloggedOff = gapMinutes - 30;
-                systemOffMinutes = Math.max(systemOffMinutes, (attendance.system_off_minutes || 0) + unloggedOff);
+        const storedOff = Math.max(0, parseInt(attendance.system_off_minutes, 10) || 0);
+        const clientOff = req.body.system_off_minutes !== undefined
+            ? Math.max(0, parseInt(req.body.system_off_minutes, 10) || 0)
+            : storedOff;
+        let systemOffMinutes = Math.min(maxPossibleOff, Math.max(storedOff, clientOff));
+
+        // Account for any unlogged gap strictly inside 09:30 AM - 06:30 PM IST before punch out
+        if (attendance.last_activity_time && bounds && bounds.effectiveEndMs > bounds.effectiveStartMs) {
+            const lastActMs = moment(attendance.last_activity_time).valueOf();
+            if (!isNaN(lastActMs)) {
+                const clampedStartMs = Math.max(lastActMs, bounds.effectiveStartMs);
+                if (bounds.effectiveEndMs > clampedStartMs) {
+                    const gapMinutes = Math.floor((bounds.effectiveEndMs - clampedStartMs) / 60000);
+                    if (gapMinutes > IDLE_THRESHOLD_MINUTES) {
+                        const unloggedOff = gapMinutes - IDLE_THRESHOLD_MINUTES;
+                        systemOffMinutes = Math.min(maxPossibleOff, Math.max(systemOffMinutes, storedOff + unloggedOff));
+                    }
+                }
             }
         }
 
@@ -1037,9 +1109,9 @@ const syncSystemOffTime = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Employee not found' });
         }
 
-        const istMoment = moment().utcOffset('+05:30');
+        const istMoment = moment().utcOffset(IST_OFFSET);
         const today = req.body.date || istMoment.format('YYYY-MM-DD');
-        const systemOffMinutes = parseInt(req.body.system_off_minutes, 10) || 0;
+        const requestedOff = Math.max(0, parseInt(req.body.system_off_minutes, 10) || 0);
 
         const attendance = await Attendance.findOne({
             where: {
@@ -1057,13 +1129,31 @@ const syncSystemOffTime = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Employee has not checked in today' });
         }
 
-        // Compute current working hours
-        let grossHours = parseFloat(attendance.working_hours) || 0;
-        if (!attendance.check_out && attendance.check_in) {
-            const inTime = moment(attendance.check_in, 'HH:mm:ss');
-            const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
-            grossHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
+        if (attendance.check_out) {
+            return res.json({
+                success: true,
+                message: 'Already checked out; system off time finalized',
+                data: {
+                    system_off_minutes: attendance.system_off_minutes || 0,
+                    net_working_hours: parseFloat(attendance.net_working_hours || attendance.working_hours || 0),
+                    working_hours: parseFloat(attendance.working_hours || 0),
+                    last_activity_time: attendance.last_activity_time
+                }
+            });
         }
+
+        // Compute current working hours & clamp off time to 09:30 AM - 06:30 PM IST
+        const inTime = parseISTDateTime(today, attendance.check_in);
+        const grossHours = inTime
+            ? parseFloat(Math.max(0, istMoment.diff(inTime, 'hours', true)).toFixed(2))
+            : (parseFloat(attendance.working_hours) || 0);
+
+        const bounds = getShiftTrackingBounds(today, attendance.check_in, istMoment);
+        const maxPossibleOff = bounds ? bounds.maxPossibleOffMinutes : 0;
+        const systemOffMinutes = Math.min(
+            maxPossibleOff,
+            Math.max(parseInt(attendance.system_off_minutes, 10) || 0, requestedOff)
+        );
 
         const offHours = systemOffMinutes / 60;
         const netHours = parseFloat(Math.max(0, grossHours - offHours).toFixed(2));
@@ -1117,16 +1207,22 @@ const recordHeartbeat = async (req, res) => {
         const now = new Date();
         const updateData = { last_activity_time: now };
 
-        if (req.body.system_off_minutes !== undefined) {
-            const clientOff = parseInt(req.body.system_off_minutes, 10);
-            if (!isNaN(clientOff) && clientOff >= (attendance.system_off_minutes || 0)) {
-                updateData.system_off_minutes = clientOff;
-                const inTime = moment(attendance.check_in, 'HH:mm:ss');
-                const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
-                const grossHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
-                updateData.net_working_hours = parseFloat(Math.max(0, grossHours - (clientOff / 60)).toFixed(2));
-            }
-        }
+        const inTime = parseISTDateTime(today, attendance.check_in);
+        const grossHours = inTime
+            ? parseFloat(Math.max(0, istMoment.diff(inTime, 'hours', true)).toFixed(2))
+            : 0;
+
+        const bounds = getShiftTrackingBounds(today, attendance.check_in, istMoment);
+        const maxPossibleOff = bounds ? bounds.maxPossibleOffMinutes : 0;
+        const existingOff = Math.max(0, parseInt(attendance.system_off_minutes, 10) || 0);
+        const parsedClientOff = req.body.system_off_minutes !== undefined
+            ? parseInt(req.body.system_off_minutes, 10)
+            : NaN;
+        const candidateOff = !isNaN(parsedClientOff) ? Math.max(existingOff, parsedClientOff) : existingOff;
+        const clampedOff = Math.min(maxPossibleOff, Math.max(0, candidateOff));
+
+        updateData.system_off_minutes = clampedOff;
+        updateData.net_working_hours = parseFloat(Math.max(0, grossHours - (clampedOff / 60)).toFixed(2));
 
         await attendance.update(updateData);
         res.json({
@@ -1195,27 +1291,9 @@ const getAttendanceStats = async (req, res) => {
             (todayAttendance.check_out ? 'checked-out' : 'checked-in') : 
             'not-checked-in';
 
-        // Calculate live working hours if currently checked in
-        let liveWorkingHours = parseFloat(todayAttendance?.working_hours || 0);
-        let currentOffMinutes = todayAttendance?.system_off_minutes || 0;
-
-        if (todayAttendance?.check_in && !todayAttendance?.check_out) {
-            const inTime = moment(todayAttendance.check_in, 'HH:mm:ss');
-            const nowTime = moment(istMoment.format('HH:mm:ss'), 'HH:mm:ss');
-            liveWorkingHours = parseFloat(Math.max(0, nowTime.diff(inTime, 'hours', true)).toFixed(2));
-
-            // Inactivity check while application was closed or idle (> 30 mins)
-            if (todayAttendance.last_activity_time) {
-                const lastActMoment = moment(todayAttendance.last_activity_time).utcOffset('+05:30');
-                const awayMinutes = istMoment.diff(lastActMoment, 'minutes');
-                if (awayMinutes > 30) {
-                    const extraOff = awayMinutes - 30;
-                    currentOffMinutes = Math.max(currentOffMinutes, (todayAttendance.system_off_minutes || 0) + extraOff);
-                }
-            }
-        }
-
-        const netLiveHours = parseFloat(Math.max(0, liveWorkingHours - (currentOffMinutes / 60)).toFixed(2));
+        const liveMetrics = todayAttendance
+            ? calculateShiftAttendanceMetrics(todayAttendance, istMoment)
+            : { grossHours: 0, systemOffMinutes: 0, netWorkingHours: 0, isLiveOff: false };
 
         res.json({
             success: true,
@@ -1227,11 +1305,9 @@ const getAttendanceStats = async (req, res) => {
                 checkOutImage: todayAttendance?.check_out_image || null,
                 rawCheckIn: todayAttendance?.check_in || null,
                 rawCheckOut: todayAttendance?.check_out || null,
-                systemOffMinutes: currentOffMinutes,
-                netWorkingHours: todayAttendance?.net_working_hours !== null && todayAttendance?.net_working_hours !== undefined 
-                    ? parseFloat(todayAttendance.net_working_hours) 
-                    : netLiveHours,
-                workingHours: liveWorkingHours,
+                systemOffMinutes: liveMetrics.systemOffMinutes,
+                netWorkingHours: liveMetrics.netWorkingHours,
+                workingHours: liveMetrics.grossHours,
                 lastActivityTime: todayAttendance?.last_activity_time || null,
                 monthlyStats
             }
@@ -1383,6 +1459,7 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
         let totalWorkingHours = 0;
         let totalSystemOffMinutes = 0;
         let totalNetWorkingHours = 0;
+        const istMoment = moment().utcOffset(IST_OFFSET);
 
         while (cur.isSameOrBefore(endDate)) {
             const dateStr = cur.format('YYYY-MM-DD');
@@ -1396,11 +1473,11 @@ const getEmployeeMonthlyAttendance = async (req, res) => {
                 const isLate = (att.late_minutes || 0) > 0;
                 const isEarlyLeave = (att.early_leave_minutes || 0) > 0;
                 const isOnTime = !isLate && !isEarlyLeave && !!att.check_out;
-                const wHours = parseFloat(att.working_hours || 0);
-                const offMinutes = att.system_off_minutes || 0;
-                const netHours = parseFloat(att.net_working_hours !== null && att.net_working_hours !== undefined 
-                    ? att.net_working_hours 
-                    : Math.max(0, wHours - (offMinutes / 60)).toFixed(2));
+                const {
+                    grossHours: wHours,
+                    systemOffMinutes: offMinutes,
+                    netWorkingHours: netHours
+                } = calculateShiftAttendanceMetrics(att, istMoment);
 
                 totalWorkingHours += wHours;
                 totalSystemOffMinutes += offMinutes;
