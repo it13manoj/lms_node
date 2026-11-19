@@ -2,6 +2,7 @@ const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 const User = require('../models/User');
 const Holiday = require('../models/Holiday');
+const Screenshot = require('../models/Screenshot');
 const { sequelize } = require('../config/database');
 const { Op } = require('sequelize');
 const moment = require('moment');
@@ -1031,6 +1032,40 @@ const checkOut = async (req, res) => {
                     }
                 }
             }
+        }
+
+        // Calculate system off time via screenshot gaps (> 12 minutes)
+        try {
+            const dayScreenshots = await Screenshot.findAll({
+                where: { employee_id: attendance.employee_id, date: attendance.date },
+                order: [['capture_time', 'ASC']],
+                attributes: ['capture_time'],
+                raw: true
+            });
+            if (dayScreenshots && dayScreenshots.length > 0) {
+                let ssOff = 0;
+                for (let i = 1; i < dayScreenshots.length; i++) {
+                    const prevM = moment(`${attendance.date} ${dayScreenshots[i - 1].capture_time}`, 'YYYY-MM-DD HH:mm:ss');
+                    const currM = moment(`${attendance.date} ${dayScreenshots[i].capture_time}`, 'YYYY-MM-DD HH:mm:ss');
+                    const gap = Math.round(currM.diff(prevM, 'minutes', true));
+                    if (gap > 12) {
+                        ssOff += gap;
+                    }
+                }
+                if (checkOutMoment) {
+                    const lastSS = dayScreenshots[dayScreenshots.length - 1];
+                    const lastSSM = moment(`${attendance.date} ${lastSS.capture_time}`, 'YYYY-MM-DD HH:mm:ss');
+                    if (checkOutMoment.isAfter(lastSSM)) {
+                        const endGap = Math.round(checkOutMoment.diff(lastSSM, 'minutes', true));
+                        if (endGap > 12) {
+                            ssOff += endGap;
+                        }
+                    }
+                }
+                systemOffMinutes = Math.min(maxPossibleOff, Math.max(systemOffMinutes, ssOff));
+            }
+        } catch (ssErr) {
+            console.warn('Could not compute screenshot off minutes at check-out:', ssErr.message);
         }
 
         const grossHours = workingHours > 0 ? workingHours : 0;

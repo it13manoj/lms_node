@@ -1,6 +1,7 @@
 const Screenshot = require('../models/Screenshot');
 const Employee = require('../models/Employee');
 const User = require('../models/User');
+const Attendance = require('../models/Attendance');
 const { Op } = require('sequelize');
 const moment = require('moment');
 const fs = require('fs');
@@ -19,6 +20,137 @@ const isWithinOfficeHoursIST = (istMoment) => {
 const formatTime12 = (timeStr) => {
     if (!timeStr) return '--:--';
     return moment(timeStr, ['HH:mm:ss', 'HH:mm']).format('hh:mm:ss A');
+};
+
+const formatMinutes = (mins) => {
+    const m = Math.max(0, parseInt(mins, 10) || 0);
+    const hrs = Math.floor(m / 60);
+    const rem = m % 60;
+    if (hrs > 0 && rem > 0) return `${hrs}h ${rem}m`;
+    if (hrs > 0) return `${hrs}h`;
+    return `${rem}m`;
+};
+
+/**
+ * Compute gaps between consecutive screenshots for the same user on the same date.
+ * If gap > 12 minutes, it's flagged as system off time.
+ */
+const enrichScreenshotsWithGaps = (records = []) => {
+    if (!records || records.length === 0) {
+        return {
+            formatted: [],
+            totalOffMinutes: 0,
+            offGapsCount: 0,
+            normalGapsCount: 0,
+            offIntervals: []
+        };
+    }
+
+    // Group records by user_id and date
+    const groups = {};
+    records.forEach(r => {
+        const json = typeof r.toJSON === 'function' ? r.toJSON() : { ...r };
+        const key = `${json.user_id || json.employee_id || 0}_${json.date}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(json);
+    });
+
+    let globalOffMinutes = 0;
+    let globalOffGapsCount = 0;
+    let globalNormalGapsCount = 0;
+    const globalOffIntervals = [];
+
+    const enrichedMap = {};
+
+    Object.values(groups).forEach(group => {
+        // Sort chronologically ascending by capture_time
+        group.sort((a, b) => {
+            const timeA = String(a.capture_time || '');
+            const timeB = String(b.capture_time || '');
+            return timeA.localeCompare(timeB);
+        });
+
+        for (let i = 0; i < group.length; i++) {
+            const curr = group[i];
+            let gapMinutes = null;
+            let gapSeconds = null;
+            let isGapAlert = false;
+            let gapOffMinutes = 0;
+            let prevCaptureTime = null;
+            let prevCaptureTimeFormatted = null;
+            let gapBadgeText = 'Initial capture';
+            let gapStatus = 'start';
+
+            if (i > 0) {
+                const prev = group[i - 1];
+                prevCaptureTime = prev.capture_time;
+                prevCaptureTimeFormatted = formatTime12(prev.capture_time);
+
+                const prevMoment = moment(`${curr.date} ${prev.capture_time}`, 'YYYY-MM-DD HH:mm:ss');
+                const currMoment = moment(`${curr.date} ${curr.capture_time}`, 'YYYY-MM-DD HH:mm:ss');
+                const diffSec = Math.max(0, currMoment.diff(prevMoment, 'seconds'));
+                gapSeconds = diffSec;
+                gapMinutes = Math.round(diffSec / 60);
+
+                if (gapMinutes > 12) {
+                    isGapAlert = true;
+                    gapOffMinutes = gapMinutes;
+                    gapStatus = 'system_off';
+                    gapBadgeText = `⚠️ Gap: ${gapMinutes}m (Off: ${gapMinutes}m)`;
+                    globalOffMinutes += gapMinutes;
+                    globalOffGapsCount++;
+                    globalOffIntervals.push({
+                        date: curr.date,
+                        userId: curr.user_id,
+                        employeeId: curr.employee_id,
+                        employeeName: curr.employee_name,
+                        fromTime: prev.capture_time,
+                        fromTimeFormatted: prevCaptureTimeFormatted,
+                        toTime: curr.capture_time,
+                        toTimeFormatted: formatTime12(curr.capture_time),
+                        gapMinutes,
+                        offMinutes: gapMinutes
+                    });
+                } else {
+                    gapStatus = 'normal';
+                    gapBadgeText = `⏱️ +${gapMinutes}m gap`;
+                    globalNormalGapsCount++;
+                }
+            }
+
+            enrichedMap[curr.id] = {
+                ...curr,
+                capture_time_formatted: formatTime12(curr.capture_time),
+                verified_at_ist: curr.verified_at
+                    ? moment(curr.verified_at).utcOffset(IST_OFFSET).format('DD MMM YYYY, hh:mm A')
+                    : null,
+                prev_capture_time: prevCaptureTime,
+                prev_capture_time_formatted: prevCaptureTimeFormatted,
+                gap_minutes: gapMinutes,
+                gap_seconds: gapSeconds,
+                is_gap_alert: isGapAlert,
+                gap_off_minutes: gapOffMinutes,
+                gap_badge_text: gapBadgeText,
+                gap_status: gapStatus
+            };
+        }
+    });
+
+    const formatted = records.map(r => {
+        const id = r.id;
+        return enrichedMap[id] || {
+            ...(typeof r.toJSON === 'function' ? r.toJSON() : r),
+            capture_time_formatted: formatTime12(r.capture_time)
+        };
+    });
+
+    return {
+        formatted,
+        totalOffMinutes: globalOffMinutes,
+        offGapsCount: globalOffGapsCount,
+        normalGapsCount: globalNormalGapsCount,
+        offIntervals: globalOffIntervals
+    };
 };
 
 const saveScreenshotFile = (base64Data, dateStr, userId, employeeId) => {
@@ -149,6 +281,45 @@ const uploadScreenshot = async (req, res) => {
             notes: req.body.notes ? String(req.body.notes).slice(0, 255) : null
         });
 
+        // Automatically sync attendance system_off_minutes from screenshot gaps (> 12 minutes)
+        if (employee) {
+            try {
+                const todayScreenshots = await Screenshot.findAll({
+                    where: { employee_id: employee.id, date: dateStr },
+                    order: [['capture_time', 'ASC']],
+                    attributes: ['id', 'capture_time', 'date', 'user_id', 'employee_id'],
+                    raw: true
+                });
+
+                const { totalOffMinutes } = enrichScreenshotsWithGaps(todayScreenshots);
+
+                const att = await Attendance.findOne({
+                    where: { employee_id: employee.id, date: dateStr }
+                });
+
+                if (att) {
+                    const shiftStartMom = moment(`${dateStr} 09:30:00+05:30`);
+                    const shiftEndMom = moment(`${dateStr} 18:30:00+05:30`);
+                    const checkInMom = att.check_in ? moment(`${dateStr} ${att.check_in}+05:30`) : null;
+                    const liveEndMom = att.check_out ? moment(`${dateStr} ${att.check_out}+05:30`) : istNow;
+                    const effectiveEnd = moment.min(liveEndMom, shiftEndMom);
+                    const effectiveStart = checkInMom ? moment.max(checkInMom, shiftStartMom) : shiftStartMom;
+                    const maxPossibleOff = Math.max(0, Math.floor(effectiveEnd.diff(effectiveStart, 'minutes')));
+
+                    const clampedOff = Math.min(maxPossibleOff, totalOffMinutes);
+                    const grossH = checkInMom ? parseFloat(Math.max(0, effectiveEnd.diff(checkInMom, 'hours', true)).toFixed(2)) : 0;
+                    const netH = parseFloat(Math.max(0, grossH - (clampedOff / 60)).toFixed(2));
+
+                    await att.update({
+                        system_off_minutes: clampedOff,
+                        net_working_hours: netH
+                    });
+                }
+            } catch (syncErr) {
+                console.warn('Could not sync attendance off time from screenshot:', syncErr.message);
+            }
+        }
+
         res.status(201).json({
             success: true,
             message: 'Screenshot uploaded successfully',
@@ -209,16 +380,19 @@ const getScreenshots = async (req, res) => {
             }));
         }
 
-        const formatted = records.map(r => {
-            const json = r.toJSON();
-            return {
-                ...json,
-                capture_time_formatted: formatTime12(json.capture_time),
-                verified_at_ist: json.verified_at
-                    ? moment(json.verified_at).utcOffset(IST_OFFSET).format('DD MMM YYYY, hh:mm A')
-                    : null
-            };
-        });
+        const {
+            formatted,
+            totalOffMinutes,
+            offGapsCount,
+            normalGapsCount,
+            offIntervals
+        } = enrichScreenshotsWithGaps(records);
+
+        summary.total_off_minutes = totalOffMinutes;
+        summary.total_off_formatted = formatMinutes(totalOffMinutes);
+        summary.off_gaps_count = offGapsCount;
+        summary.normal_gaps_count = normalGapsCount;
+        summary.off_intervals = offIntervals;
 
         res.json({
             success: true,
