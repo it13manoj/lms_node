@@ -152,6 +152,17 @@ const updateEmployee = async (req, res) => {
             bank_account: bank_account || employee.bank_account
         });
 
+        // Prevent deactivating or terminating admin accounts
+        if (status && ['inactive', 'terminated'].includes(status)) {
+            const userCheck = await User.findByPk(employee.user_id, { paranoid: false });
+            if (userCheck && userCheck.role === 'admin') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Admin accounts cannot be deactivated or terminated'
+                });
+            }
+        }
+
         // Update corresponding user record (email, status, role)
         const userUpdates = {};
         if (email && email !== employee.email) userUpdates.email = email;
@@ -711,6 +722,14 @@ const updateEmployeeStatus = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'User account not found'
+            });
+        }
+
+        // Never allow deactivating or terminating an admin account
+        if (user.role === 'admin' && ['inactive', 'terminated'].includes(status)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Admin accounts cannot be deactivated or terminated'
             });
         }
 
