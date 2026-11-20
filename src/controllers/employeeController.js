@@ -209,6 +209,14 @@ const deleteEmployee = async (req, res) => {
             });
         }
 
+        // Never allow deleting admin accounts
+        if (user.role === 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Admin accounts cannot be deleted'
+            });
+        }
+
         // Start transaction
         const transaction = await sequelize.transaction();
 
