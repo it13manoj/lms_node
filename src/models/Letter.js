@@ -10,7 +10,7 @@ const Letter = sequelize.define('Letter', {
         autoIncrement: true
     },
     letter_type: {
-        type: DataTypes.ENUM('offer', 'joining', 'experience'),
+        type: DataTypes.ENUM('offer', 'joining', 'experience', 'training'),
         allowNull: false,
         defaultValue: 'offer'
     },

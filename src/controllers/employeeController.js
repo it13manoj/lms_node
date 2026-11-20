@@ -134,7 +134,8 @@ const updateEmployee = async (req, res) => {
 
         const { 
             first_name, last_name, email, phone, department, 
-            position, salary, address, emergency_contact, bank_account 
+            position, salary, address, emergency_contact, bank_account,
+            status, role
         } = req.body;
 
         // Update employee
@@ -151,12 +152,14 @@ const updateEmployee = async (req, res) => {
             bank_account: bank_account || employee.bank_account
         });
 
-        // Update user email if changed
-        if (email && email !== employee.email) {
-            await User.update(
-                { email },
-                { where: { id: employee.user_id } }
-            );
+        // Update corresponding user record (email, status, role)
+        const userUpdates = {};
+        if (email && email !== employee.email) userUpdates.email = email;
+        if (status && ['active', 'inactive', 'terminated'].includes(status)) userUpdates.status = status;
+        if (role) userUpdates.role = role;
+
+        if (Object.keys(userUpdates).length > 0) {
+            await User.update(userUpdates, { where: { id: employee.user_id }, paranoid: false });
         }
 
         res.json({
@@ -682,10 +685,68 @@ const getEmployeeAttendance = async (req, res) => {
     }
 };
 
+// @desc    Update employee active/inactive/terminated status
+// @route   PATCH /api/employees/:id/status
+// @access  Private (Admin/HR)
+const updateEmployeeStatus = async (req, res) => {
+    try {
+        const { status } = req.body;
+        if (!['active', 'inactive', 'terminated'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status. Must be active, inactive, or terminated'
+            });
+        }
+
+        const employee = await Employee.findByPk(req.params.id, { paranoid: false });
+        if (!employee) {
+            return res.status(404).json({
+                success: false,
+                message: 'Employee not found'
+            });
+        }
+
+        const user = await User.findByPk(employee.user_id, { paranoid: false });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User account not found'
+            });
+        }
+
+        if (status === 'active') {
+            await user.update({ status: 'active', deleted_at: null });
+            await employee.update({ deleted_at: null });
+        } else if (status === 'inactive') {
+            await user.update({ status: 'inactive' });
+        } else if (status === 'terminated') {
+            await user.update({ status: 'terminated' });
+        }
+
+        res.json({
+            success: true,
+            message: `Employee account marked as ${status}. Access ${status === 'active' ? 'granted' : 'immediately revoked'}.`,
+            data: {
+                employee_id: employee.id,
+                user_id: user.id,
+                status
+            }
+        });
+    } catch (error) {
+        console.error('Update employee status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+};
+
 module.exports = { 
     getEmployees, 
     getEmployee, 
     updateEmployee, 
+    updateEmployeeStatus,
     deleteEmployee,
     restoreEmployee,
     permanentDeleteEmployee,

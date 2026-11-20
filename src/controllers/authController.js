@@ -38,8 +38,12 @@ const login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        if (user.status === 'inactive') {
-            return res.status(401).json({ message: 'Account is deactivated' });
+        if (user.status !== 'active' || user.deleted_at) {
+            return res.status(401).json({ 
+                success: false,
+                account_revoked: true,
+                message: 'Your account has been deactivated or terminated. Please contact administrator.' 
+            });
         }
         
         const isMatch = await user.matchPassword(password);
@@ -160,6 +164,14 @@ const getMe = async (req, res) => {
                 model: Employee
             }]
         });
+
+        if (!user || user.status !== 'active' || user.deleted_at) {
+            return res.status(401).json({
+                success: false,
+                account_revoked: true,
+                message: 'Your account has been deactivated or terminated. Please contact administrator.'
+            });
+        }
         
         res.json(user);
     } catch (error) {

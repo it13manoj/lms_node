@@ -5,6 +5,7 @@ const {
     getEmployees,
     getEmployee,
     updateEmployee,
+    updateEmployeeStatus,
     deleteEmployee,
     restoreEmployee,
     permanentDeleteEmployee,
@@ -49,6 +50,9 @@ router.get('/:id/attendance', protect, canAccessEmployeeData, getEmployeeAttenda
 router.put('/:id', protect, authorize('admin', 'hr'), [
     body('email').optional().isEmail().withMessage('Please provide a valid email')
 ], updateEmployee);
+
+// Update employee status (active, inactive, terminated) - Admin, HR only
+router.patch('/:id/status', protect, authorize('admin', 'hr'), updateEmployeeStatus);
 
 // Soft delete employee - Admin only
 router.delete('/:id', protect, authorize('admin'), deleteEmployee);

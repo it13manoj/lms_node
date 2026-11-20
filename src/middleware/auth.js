@@ -22,15 +22,17 @@ const protect = async (req, res, next) => {
             if (!req.user) {
                 return res.status(401).json({ 
                     success: false,
+                    account_revoked: true,
                     message: 'Not authorized, user not found' 
                 });
             }
 
-            // Check if user is soft deleted
-            if (req.user.deleted_at) {
+            // Immediately revoke all panel and API access if user is deactivated, terminated, or deleted
+            if (req.user.deleted_at || req.user.status !== 'active') {
                 return res.status(401).json({ 
                     success: false,
-                    message: 'Account has been deactivated' 
+                    account_revoked: true,
+                    message: 'Your account has been deactivated or terminated by the administrator. Access has been revoked.' 
                 });
             }
 
@@ -69,8 +71,10 @@ const optionalAuth = async (req, res, next) => {
                     attributes: ['id', 'first_name', 'last_name', 'employee_id', 'department', 'position']
                 }]
             });
-            if (req.user && !req.user.deleted_at) {
+            if (req.user && !req.user.deleted_at && req.user.status === 'active') {
                 req.userRole = req.user.role;
+            } else {
+                req.user = null;
             }
         } catch (error) {
             // Ignore error for guests

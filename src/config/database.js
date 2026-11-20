@@ -57,6 +57,20 @@ const ensureAttendanceColumns = async () => {
 
 const ensureLetterSecurityColumns = async () => {
     try {
+        // Ensure letter_type supports 'training'
+        try {
+            await sequelize.query("ALTER TABLE letters MODIFY COLUMN letter_type ENUM('offer', 'joining', 'experience', 'training') NOT NULL DEFAULT 'offer'");
+        } catch (e) {
+            console.warn("Letter letter_type alter notice:", e.message);
+        }
+
+        // Ensure users.status supports 'active', 'inactive', 'terminated'
+        try {
+            await sequelize.query("ALTER TABLE users MODIFY COLUMN status ENUM('active', 'inactive', 'terminated') DEFAULT 'active'");
+        } catch (e) {
+            console.warn("Users status alter notice:", e.message);
+        }
+
         const [sigCol] = await sequelize.query("SHOW COLUMNS FROM letters LIKE 'include_signature'");
         if (!sigCol || sigCol.length === 0) {
             await sequelize.query("ALTER TABLE letters ADD COLUMN include_signature TINYINT(1) DEFAULT 0");

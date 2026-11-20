@@ -9,7 +9,7 @@ const { Op } = require('sequelize');
  */
 const generateReferenceNo = async (type) => {
     const year = new Date().getFullYear();
-    const typePrefix = type === 'joining' ? 'JL' : (type === 'experience' ? 'EXP' : 'OL');
+    const typePrefix = type === 'joining' ? 'JL' : (type === 'experience' ? 'EXP' : (type === 'training' ? 'TC' : 'OL'));
     const prefix = `PT/${typePrefix}/${year}/`;
     
     // Find the latest letter with this prefix
@@ -74,6 +74,7 @@ const getLetters = async (req, res) => {
         const totalOffer = await Letter.count({ where: { letter_type: 'offer' } });
         const totalJoining = await Letter.count({ where: { letter_type: 'joining' } });
         const totalExperience = await Letter.count({ where: { letter_type: 'experience' } });
+        const totalTraining = await Letter.count({ where: { letter_type: 'training' } });
 
         res.json({
             success: true,
@@ -86,7 +87,8 @@ const getLetters = async (req, res) => {
                     total: count,
                     offer: totalOffer,
                     joining: totalJoining,
-                    experience: totalExperience
+                    experience: totalExperience,
+                    training: totalTraining
                 }
             }
         });
@@ -430,9 +432,10 @@ const createLetter = async (req, res) => {
             created_by: req.user?.id || null
         });
 
+        const letterName = letter_type === 'joining' ? 'Joining letter' : (letter_type === 'experience' ? 'Experience certificate' : (letter_type === 'training' ? 'Training certificate' : 'Offer letter'));
         res.status(201).json({
             success: true,
-            message: `${letter_type === 'joining' ? 'Joining' : (letter_type === 'experience' ? 'Experience' : 'Offer')} letter generated successfully`,
+            message: `${letterName} generated successfully`,
             data: newLetter
         });
     } catch (error) {
