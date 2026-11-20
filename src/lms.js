@@ -19,6 +19,8 @@ const salaryRoutes = require('./routes/salaryRoutes');
 const meetingRoutes = require('./routes/meetingRoutes');
 const letterRoutes = require('./routes/letterRoutes');
 const screenshotRoutes = require('./routes/screenshotRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+const performanceRoutes = require('./routes/performanceRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -155,6 +157,8 @@ app.use('/api/salary', salaryRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/letters', letterRoutes);
 app.use('/api/screenshots', screenshotRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/performance', performanceRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
